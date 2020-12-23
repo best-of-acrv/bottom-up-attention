@@ -15,6 +15,7 @@ class BaseModel(nn.Module):
 
         # check for cuda availability
         self.cuda_available = True if torch.cuda.is_available() else False
+        self.batch_size = args.batch_size
 
         self.w_emb = w_emb
         self.q_emb = q_emb

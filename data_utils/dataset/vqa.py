@@ -77,7 +77,7 @@ def _load_dataset(dataroot, name, img_id2val):
     dataroot: root path of dataset
     name: 'train', 'val'
     """
-    question_path = os.path.join(dataroot, 'mscoco', 'v2_OpenEnded_mscoco_%s2014_questions.json' % name)
+    question_path = os.path.join(dataroot, 'coco', 'v2_OpenEnded_mscoco_%s2014_questions.json' % name)
     questions = sorted(json.load(open(question_path))['questions'],
                        key=lambda x: x['question_id'])
     answer_path = os.path.join(dataroot, 'cache', '%s_target.pkl' % name)
@@ -96,12 +96,12 @@ def _load_dataset(dataroot, name, img_id2val):
 
 
 class VQAFeatureDataset(Dataset):
-    def __init__(self, name, dictionary, dataroot='data'):
+    def __init__(self, name, dictionary, dataroot='../acrv-datasets/datasets'):
         super(VQAFeatureDataset, self).__init__()
         assert name in ['train', 'val']
 
         # image directory
-        self.image_prefix = os.path.join('data', 'mscoco', name + '2014', 'COCO_' + name + '2014_')
+        self.image_prefix = os.path.join(dataroot, 'coco', name + '2014', 'COCO_' + name + '2014_')
 
         ans2label_path = os.path.join(dataroot, 'cache', 'trainval_ans2label.pkl')
         label2ans_path = os.path.join(dataroot, 'cache', 'trainval_label2ans.pkl')
@@ -111,9 +111,9 @@ class VQAFeatureDataset(Dataset):
 
         self.dictionary = dictionary
 
-        self.img_id2idx = pickle.load(open(os.path.join(dataroot, 'trainval_36', '%s36_imgid2idx.pkl' % name), 'rb'))
+        self.img_id2idx = pickle.load(open(os.path.join(dataroot, 'trainval36', '%s36_imgid2idx.pkl' % name), 'rb'))
         print('loading features from h5 file')
-        h5_path = os.path.join(dataroot, 'trainval_36', '%s36.hdf5' % name)
+        h5_path = os.path.join(dataroot, 'trainval36', '%s36.hdf5' % name)
         with h5py.File(h5_path, 'r') as hf:
             self.features = np.array(hf.get('image_features'))
             self.spatials = np.array(hf.get('spatial_features'))

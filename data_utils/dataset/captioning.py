@@ -10,7 +10,7 @@ class CaptionDataset(Dataset):
     A PyTorch Dataset class to be used in a PyTorch DataLoader to create batches.
     """
 
-    def __init__(self, name, dataroot='data', data_name='coco_5_cap_per_img_5_min_word_freq', transform=None):
+    def __init__(self, name, dataroot='../acrv-datasets/datasets', data_name='coco_5_cap_per_img_5_min_word_freq', transform=None):
         """
         :param data_folder: folder where data files are stored
         :param data_name: base name of processed datasets
@@ -23,31 +23,31 @@ class CaptionDataset(Dataset):
         # image directory
         if self.split == 'TEST':
             name = 'val'
-        self.image_prefix = os.path.join('data', 'mscoco', name + '2014')
+        self.image_prefix = os.path.join(dataroot, 'coco', name + '2014')
 
         # Open hdf5 file where image features are stored
-        self.train_hf = h5py.File(os.path.join(dataroot, 'trainval_36', 'train36.hdf5'), 'r')
+        self.train_hf = h5py.File(os.path.join(dataroot, 'trainval36', 'train36.hdf5'), 'r')
         self.train_features = self.train_hf['image_features']
-        self.val_hf = h5py.File(os.path.join(dataroot, 'trainval_36', 'val36.hdf5'), 'r')
+        self.val_hf = h5py.File(os.path.join(dataroot, 'trainval36', 'val36.hdf5'), 'r')
         self.val_features = self.val_hf['image_features']
 
         # Captions per image
         self.cpi = 5
 
         # Load encoded captions
-        with open(os.path.join(dataroot, 'mscoco', 'caption_datasets', self.split + '_CAPTIONS_' + data_name + '.json'), 'r') as j:
+        with open(os.path.join(dataroot, 'coco', 'captions', self.split + '_CAPTIONS_' + data_name + '.json'), 'r') as j:
             self.captions = json.load(j)
 
         # Load caption lengths
-        with open(os.path.join(dataroot, 'mscoco', 'caption_datasets', self.split + '_CAPLENS_' + data_name + '.json'), 'r') as j:
+        with open(os.path.join(dataroot, 'coco', 'captions', self.split + '_CAPLENS_' + data_name + '.json'), 'r') as j:
             self.caplens = json.load(j)
 
         # Load bottom up image features distribution
-        with open(os.path.join(dataroot, 'mscoco', 'caption_datasets', self.split + '_GENOME_DETS_' + data_name + '.json'), 'r') as j:
+        with open(os.path.join(dataroot, 'coco', 'captions', self.split + '_GENOME_DETS_' + data_name + '.json'), 'r') as j:
             self.objdet = json.load(j)
 
         # Load image ids
-        with open(os.path.join(dataroot, 'mscoco', 'caption_datasets', self.split + '_IMAGE_IDS_' + data_name + '.json'), 'r') as j:
+        with open(os.path.join(dataroot, 'coco', 'captions', self.split + '_IMAGE_IDS_' + data_name + '.json'), 'r') as j:
             self.imageids = json.load(j)
 
         # PyTorch transformation pipeline for the image (normalizing, etc.)

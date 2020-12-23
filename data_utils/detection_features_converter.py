@@ -9,6 +9,7 @@ Hierarchy of HDF5 file:
   'image_bb': num_images x num_boxes x 4 array of bounding boxes }
 """
 import os
+import argparse
 import sys
 import base64
 import csv
@@ -16,17 +17,23 @@ import h5py
 import pickle
 import numpy as np
 
+# get general arguments
+parser = argparse.ArgumentParser(description='Detection Features Converter')
+# add dataset specific arguments
+parser.add_argument('--data_directory', type=str, default='../acrv-datasets/datasets', help='root directory of datasets')
+args = parser.parse_args()
+
 csv.field_size_limit(sys.maxsize)
 
 FIELDNAMES = ['image_id', 'image_w', 'image_h', 'num_boxes', 'boxes', 'features']
 
-infile = os.path.join('data', 'trainval_36', 'trainval_resnet101_faster_rcnn_genome_36.tsv')
+infile = os.path.join(args.data_directory, 'trainval36', 'trainval_resnet101_faster_rcnn_genome_36.tsv')
 
-train_data_file = os.path.join('data', 'trainval_36', 'train36.hdf5')
-val_data_file = os.path.join('data', 'trainval_36', 'val36.hdf5')
+train_data_file = os.path.join(args.data_directory, 'trainval36', 'train36.hdf5')
+val_data_file = os.path.join(args.data_directory, 'trainval36', 'val36.hdf5')
 
-train_indices_file = os.path.join('data', 'trainval_36', 'train36_imgid2idx.pkl')
-val_indices_file = os.path.join('data', 'trainval_36', 'val36_imgid2idx.pkl')
+train_indices_file = os.path.join(args.data_directory, 'trainval36', 'train36_imgid2idx.pkl')
+val_indices_file = os.path.join(args.data_directory, 'trainval36', 'val36_imgid2idx.pkl')
 
 train_ids_file = os.path.join('data', 'train_ids.pkl')
 val_ids_file = os.path.join('data', 'val_ids.pkl')

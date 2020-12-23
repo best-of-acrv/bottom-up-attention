@@ -1,4 +1,5 @@
 import os
+import argparse
 import json
 import numpy as np
 from data_utils.dataset.vqa import Dictionary
@@ -41,10 +42,15 @@ def create_glove_embedding_init(idx2word, glove_file):
         weights[idx] = word2emb[word]
     return weights, word2emb
 
+# get general arguments
+parser = argparse.ArgumentParser(description='Create Dictionary')
+# add dataset specific arguments
+parser.add_argument('--data_directory', type=str, default='../acrv-datasets/datasets', help='root directory of datasets')
+args = parser.parse_args()
 
 if __name__ == '__main__':
     # create dictionary pickle from MSCOCO annotations
-    dataroot = os.path.join('data', 'mscoco')
+    dataroot = os.path.join(args.data_directory, 'coco')
     d = create_dictionary(dataroot)
     d.dump_to_file(os.path.join(dataroot, 'dictionary.pkl'))
 
@@ -53,9 +59,9 @@ if __name__ == '__main__':
     emb_dim = 300
 
     # create glove embeddings
-    glove_file = os.path.join('data', 'glove', 'glove.6B.%dd.txt' % emb_dim)
+    glove_file = os.path.join(args.data_directory, 'glove', 'glove.6B.%dd.txt' % emb_dim)
     weights, word2emb = create_glove_embedding_init(d.idx2word, glove_file)
 
     # save as weights as ndarray
-    np.save(os.path.join('data', 'glove', 'glove6b_init_%dd.npy' % emb_dim), weights)
+    np.save(os.path.join(args.data_directory, 'glove', 'glove6b_init_%dd.npy' % emb_dim), weights)
 

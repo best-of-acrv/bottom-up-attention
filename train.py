@@ -11,6 +11,8 @@ parser = get_argument_parser()
 parser.add_argument('--name', type=str, default='bottom-up-attention', help='custom prefix for naming model')
 parser.add_argument('--task', type=str, default='captioning', help='type of dataset: [captioning, vqa]')
 parser.add_argument('--max_epochs', type=int, default=50, help='maximum number of training epochs')
+parser.add_argument('--dataroot', type=str, default='../acrv-datasets/datasets/', help='root directory of data')
+parser.add_argument('--data_directory', type=str, default='../acrv-datasets/datasets', help='root directory of datasets')
 parser.add_argument('--save_directory', type=str, default='runs', help='save model directory')
 parser.add_argument('--load_directory', type=str, default=None, help='load model directory')
 parser.add_argument('--snapshot_num', type=int, default=None, help='snapshot number of model (if any)')
@@ -27,7 +29,7 @@ torch.backends.cudnn.benchmark = True
 if __name__ == '__main__':
 
     # Get dataset (train and validation)
-    dataset = get_dataset(dataset_name=args.task, mode='train')
+    dataset = get_dataset(dataset_name=args.task, data_root=args.dataroot, mode='train')
 
     # Get corresponding model for task
     model = get_model(args, dataset['train'], pretrained=False)

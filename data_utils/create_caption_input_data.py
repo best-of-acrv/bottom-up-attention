@@ -1,4 +1,5 @@
 import os
+import argparse
 import json
 from tqdm import tqdm
 from collections import Counter
@@ -6,7 +7,7 @@ from random import choice, sample
 import pickle
 
 
-def create_input_files(dataset, karpathy_json_path, captions_per_image, min_word_freq, output_folder, max_len=100):
+def create_input_files(dataset, train36_folder_path, karpathy_json_path, captions_per_image, min_word_freq, output_folder, max_len=100):
     """
     Creates input files for training, validation, and test data.
     :param dataset: name of dataset. Since bottom up features only available for coco, we use only coco
@@ -23,7 +24,6 @@ def create_input_files(dataset, karpathy_json_path, captions_per_image, min_word
     with open(karpathy_json_path, 'r') as j:
         data = json.load(j)
 
-    train36_folder_path = os.path.join('data', 'trainval_36')
     with open(os.path.join(train36_folder_path, 'train36_imgid2idx.pkl'), 'rb') as j:
         train_data = pickle.load(j)
 
@@ -151,11 +151,19 @@ def create_input_files(dataset, karpathy_json_path, captions_per_image, min_word
     with open(os.path.join(output_folder, 'TEST' + '_IMAGE_IDS_' + base_filename + '.json'), 'w') as j:
         json.dump(test_image_ids, j)
 
+# get general arguments
+parser = argparse.ArgumentParser(description='Create Dictionary')
+# add dataset specific arguments
+parser.add_argument('--data_directory', type=str, default='../acrv-datasets/datasets', help='root directory of datasets')
+args = parser.parse_args()
+
 if __name__ == '__main__':
+    train36_folder_path = os.path.join(args.data_directory, 'trainval36')
     # Create input files (along with word map)
     create_input_files(dataset='coco',
-                       karpathy_json_path=os.path.join('data', 'mscoco', 'caption_datasets', 'dataset_coco.json'),
+                       train36_folder_path=train36_folder_path,
+                       karpathy_json_path=os.path.join(args.data_directory, 'coco', 'captions', 'dataset_coco.json'),
                        captions_per_image=5,
                        min_word_freq=5,
-                       output_folder=os.path.join('data', 'mscoco', 'caption_datasets'),
+                       output_folder=os.path.join(args.data_directory, 'coco', 'captions'),
                        max_len=50)

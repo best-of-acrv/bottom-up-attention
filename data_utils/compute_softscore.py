@@ -1,3 +1,4 @@
+import argparse
 import json
 import re
 import pickle
@@ -214,22 +215,27 @@ def get_question(qid, questions):
         if question['question_id'] == qid:
             return question
 
+# get general arguments
+parser = argparse.ArgumentParser(description='Compute Softscore')
+# add dataset specific arguments
+parser.add_argument('--data_directory', type=str, default='../acrv-datasets/datasets', help='root directory of datasets')
+args = parser.parse_args()
 
 if __name__ == '__main__':
-    train_answer_file = os.path.join('data', 'mscoco', 'v2_mscoco_train2014_annotations.json')
+    train_answer_file = os.path.join(args.data_directory, 'coco', 'v2_mscoco_train2014_annotations.json')
     train_answers = json.load(open(train_answer_file))['annotations']
 
-    val_answer_file = os.path.join('data', 'mscoco', 'v2_mscoco_val2014_annotations.json')
+    val_answer_file = os.path.join(args.data_directory, 'coco', 'v2_mscoco_val2014_annotations.json')
     val_answers = json.load(open(val_answer_file))['annotations']
 
-    train_question_file = os.path.join('data', 'mscoco', 'v2_OpenEnded_mscoco_train2014_questions.json')
+    train_question_file = os.path.join(args.data_directory, 'coco', 'v2_OpenEnded_mscoco_train2014_questions.json')
     train_questions = json.load(open(train_question_file))['questions']
 
-    val_question_file = os.path.join('data', 'mscoco', 'v2_OpenEnded_mscoco_val2014_questions.json')
+    val_question_file = os.path.join(args.data_directory, 'coco', 'v2_OpenEnded_mscoco_val2014_questions.json')
     val_questions = json.load(open(val_question_file))['questions']
 
     answers = train_answers + val_answers
     occurence = filter_answers(answers, 9)
-    ans2label = create_ans2label(occurence, 'trainval')
-    compute_target(train_answers, ans2label, 'train')
-    compute_target(val_answers, ans2label, 'val')
+    ans2label = create_ans2label(occurence, 'trainval', cache_root=os.path.join(args.data_directory, 'cache'))
+    compute_target(train_answers, ans2label, 'train', cache_root=os.path.join(args.data_directory, 'cache'))
+    compute_target(val_answers, ans2label, 'val', cache_root=os.path.join(args.data_directory, 'cache'))

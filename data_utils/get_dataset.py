@@ -3,7 +3,7 @@ import json
 from data_utils.dataset.captioning import CaptionDataset
 from data_utils.dataset.vqa import Dictionary, VQAFeatureDataset
 
-def get_dataset(dataset_name, mode='train'):
+def get_dataset(dataset_name, data_root, mode='train'):
 
     if dataset_name.lower() == 'captioning':
         data_name = 'coco_5_cap_per_img_5_min_word_freq'
@@ -14,7 +14,7 @@ def get_dataset(dataset_name, mode='train'):
         eval_dataset = CaptionDataset('val')
 
         # Read word map
-        word_map_file = os.path.join('data', 'mscoco', 'caption_datasets', 'WORDMAP_' + data_name + '.json')
+        word_map_file = os.path.join(data_root, 'coco', 'captions', 'WORDMAP_' + data_name + '.json')
         with open(word_map_file, 'r') as j:
             word_map = json.load(j)
 
@@ -26,7 +26,7 @@ def get_dataset(dataset_name, mode='train'):
         eval_dataset.word_map = word_map
 
     elif dataset_name.lower() == 'vqa':
-        dictionary_path = os.path.join('data', 'mscoco', 'dictionary.pkl')
+        dictionary_path = os.path.join(data_root, 'coco', 'dictionary.pkl')
         dictionary = Dictionary.load_from_file(dictionary_path)
         if mode.lower() == 'train':
             train_dataset = VQAFeatureDataset('train', dictionary)

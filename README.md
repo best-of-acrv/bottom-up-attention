@@ -32,19 +32,23 @@ $ nlg-eval --setup
 
 ### Data Setup ###
 
-All data should be downloaded to the ```data``` directory of this repository. The easiest way to download the data is to 
-run the ```download_images.sh```, ```download_vqa.sh``` and ```download_captioning.sh``` scripts that are located in the 
-```data_utils``` directory.
+For the datasets required for this project, please refer to the [Best-Of-ACRV repository](https://github.com/best-of-acrv/acrv-datasets). 
+Use this repository to download and prepare the COCO and GloVe datasets required for this project. 
+The data directories should appear in the following structure:
 
 ```
-$ cd data_utils
-$ sh download_images.sh
-$ sh download_vqa.sh
-$ sh download_captioning.sh 
-``` 
+root_dir
+|--- deploy.py
+|--- eval.py
+|--- train.py
+acrv-datasets
+|--- datasets
+|------- coco
+|------- glove
+|------- trainval36
+```
 
-The downloaded features are the 36 features per image set provided by the original authors 
-(refer to [this](https://github.com/peteanderson80/bottom-up-attention) repository). 
+``trainval36`` are the 36 features per image set provided by the original authors (refer to [this repository](https://github.com/peteanderson80/bottom-up-attention)). 
 After all data has been downloaded, process the data into the correct format for captioning and visual question answering tasks 
 using ```process.sh```, located in the root directory of this repository.
 
