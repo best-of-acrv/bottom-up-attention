@@ -12,9 +12,15 @@ with as little overhead as possible. Code was adapted from the following reposit
 [here](https://github.com/hengyuan-hu/bottom-up-attention-vqa) and [here](https://https://github.com/poojahira/image-captioning-bottom-up-top-down).
 
 ## Setup ##
-From the root directory of this repository, to create the Conda environment to run code from this repository:
-
+Conda needs to be updated to the latest stable version: 
 ```
+$ conda update conda
+$ conda update --all
+```
+
+From the root directory of this repository, to create the Conda environment to run code from this repository:
+```
+$ conda config --set channel_priority strict
 $ conda env create -f requirements.yml
 ```
 This should set up the conda environment with all prerequisites for running this code. Activate this Conda

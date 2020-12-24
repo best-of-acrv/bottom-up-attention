@@ -1,10 +1,12 @@
 name: pytorch-bua
 channels:
   - defaults
+  - pytorch
+  - conda-forge
 dependencies:
   - cudatoolkit=10.1
-  - pytorch::pytorch
-  - pytorch::torchvision
+  - pytorch==1.4.0
+  - torchvision
   - h5py
   - nltk
-  - conda-forge::tqdm
+  - tqdm
