@@ -1,4 +1,7 @@
-.idea
-runs
-pretrained
 *.pyc
+*.sw*
+*.egg-info/
+
+.cache
+build/
+dist/
