@@ -2,6 +2,14 @@
 
 # Bottom-up (and top-down) attention for image captioning and visual question answering
 
+[![Best of ACRV Repository](https://img.shields.io/badge/collection-best--of--acrv-%23a31b2a)](https://roboticvision.org/best-of-acrv)
+![Primary language](https://img.shields.io/github/languages/top/best-of-acrv/bottom-up-attention)
+[![PyPI package](https://img.shields.io/pypi/pyversions/bottom-up-attention)](https://pypi.org/project/bottom-up-attention/)
+[![Conda Version](https://img.shields.io/conda/vn/conda-forge/bottom_up_attention.svg)](https://anaconda.org/conda-forge/bottom_up_attention)
+[![Conda Recipe](https://img.shields.io/badge/recipe-bottom_up_attention-green.svg)](https://anaconda.org/conda-forge/bottom_up_attention)
+[![Conda Platforms](https://img.shields.io/conda/pn/conda-forge/bottom_up_attention.svg)](https://anaconda.org/conda-forge/bottom_up_attention)
+[![License](https://img.shields.io/github/license/best-of-acrv/bottom-up-attention)](./LICENSE.txt)
+
 Bottom-up attention is a mechanism that improves the performance of tradition image captioning and visual question answering (VQA) approaches, which employ top-down attention. We use bottom-up attention to propose image regions, each with an associated feature vector, while top-down attention is still used in determining feature weightings.
 
 TODO: image of the system's output
