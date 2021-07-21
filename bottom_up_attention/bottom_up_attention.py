@@ -41,7 +41,13 @@ class BottomUpAttention(object):
         self.model.cuda()
 
     def evaluate(self, *, dataset_dir=None, output_directory='./eval_output'):
-        pass
+        # Load in the dataset
+        dataset = _load_dataset(self.task, dataset_dir, 'eval')
+
+        # Perform the requested evaluation
+        e = Evaluator(output_directory=output_directory)
+        fn = e.sample_vqa if self.task == 'vqa' else e.sample_captioning
+        fn(self.model, dataset)
 
     def predict(self, *, image=None, image_file=None, output_file=None):
         pass
@@ -57,10 +63,6 @@ class BottomUpAttention(object):
               output_directory=os.path.expanduser(
                   '~/bottom-up-attention-output'),
               snapshot_interval=5):
-        # Perform argument validation / set defaults
-        dataset_name = _sanitise_arg(dataset_name, 'dataset_name',
-                                     BottomUpAttention.DATASETS)
-
         # Load in the dataset
         dataset = _load_dataset(self.task, dataset_dir, 'train')
 
