@@ -14,7 +14,7 @@ Bottom-up attention is a mechanism that improves the performance of tradition im
 
 TODO: image of the system's output
 
-The repository contains an open-source implementation of our bottom-up attention algorithm in Python, with access to pre-trained weights for both captioning and VQA tasks. The package provides PyTorch implementations for using training, evaluation, and prediction in your own systems. The package is easily installable with `conda`, and can also be installed via `pip` if you'd prefer to manually manage dependencies.
+The repository contains an open-source implementation of our bottom-up attention algorithm in Python, with access to pre-trained weights for both captioning and VQA tasks. The package provides PyTorch implementations for using training, evaluation, and prediction in your own systems. The package is easily installable with `conda`, and can also be installed via `pip` if you prefer manually managing system dependencies.
 
 Our code is free to use, and licensed under GPL-3. We simply ask that you [cite our work](#citing-our-work) if you use bottom-up attention in your own research.
 
@@ -29,10 +29,10 @@ This repository brings the work from a number of sources together. Please see th
 
 ## Installing Bottom-up attention
 
-We offer three methods fro installing bottom-up attention:
+We offer three methods for installing bottom-up attention:
 
 1. [Through our Conda package](#conda): single command installs everything including system dependencies (recommended)
-2. [Through our pip package](#pip): single command installs RefineNet and Python dependences, you take care of system dependencies
+2. [Through our pip package](#pip): single command installs bottom-up attention and Python dependences, you take care of system dependencies
 3. [Directly from source](#from-source): allows easy editing and extension of our code, but you take care of building and all dependencies
 
 ### Conda
