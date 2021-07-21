@@ -64,6 +64,10 @@ class BottomUpAttention(object):
         # Load in the dataset
         dataset = _load_dataset(self.task, dataset_dir, 'train')
 
+        # Start a model trainer
+        print("\nPERFORMING TRAINING:")
+        Trainer(output_directory).train(self.model)
+
 
 def _load_dataset(task, dataset_dir, mode):
     pass
