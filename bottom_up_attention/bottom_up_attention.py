@@ -1,3 +1,5 @@
+import numpy as np
+from PIL import Image
 import os
 import torch
 
@@ -50,7 +52,30 @@ class BottomUpAttention(object):
         fn(self.model, dataset)
 
     def predict(self, *, image=None, image_file=None, output_file=None):
-        pass
+        # Handle input arguments
+        if image is None and image_file is None:
+            raise ValueError("Only one of 'image' or 'image_file' can be "
+                             "used in a call, not both.")
+        elif image is not None and image_file is not None:
+            raise ValueError("Either 'image' or 'image_file' must be provided")
+        if output_file is not None:
+            os.makedirs(os.path.dirname(output_file), exist_ok=True)
+
+        # Construct the input image
+        img = (np.array(Image.open(image_file).convert('RGB'))
+               if image_file else image)
+
+        # Perform the forward pass
+        # TODO create Predictor class... (look in Evaluator)
+        out = Predictor().predict(
+            img,
+            self.model,
+        )
+
+        # Save the file if requested, & return the output
+        if output_file:
+            Image.fromarray(out).save(output_file)
+        return out
 
     def train(self,
               *,
