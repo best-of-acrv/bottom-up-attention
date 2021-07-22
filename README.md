@@ -24,7 +24,7 @@ This repository brings the work from a number of sources together. Please see th
 
 - our original paper: ["Bottom-up and top-down attention for image captioning and visual question answering"](#citing-our-work)
 - an efficient open source implementation from CMU: [https://github.com/hengyuan-hu/bottom-up-attention-vqa](https://github.com/hengyuan-hu/bottom-up-attention-vqa)
-- a more recent PyTorch open source implementation: [https://github.com/peteanderson80/bottom-up-attention](https://github.com/peteanderson80/bottom-up-attention)
+- a more recent PyTorch open source implementation: [https://github.com/poojahira/image-captioning-bottom-up-top-down](https://github.com/poojahira/image-captioning-bottom-up-top-down)
 - the original Caffe implementation: [https://github.com/peteanderson80/bottom-up-attention](https://github.com/peteanderson80/bottom-up-attention)
 
 ## Installing Bottom-up attention
