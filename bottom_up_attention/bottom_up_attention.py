@@ -3,6 +3,8 @@ from PIL import Image
 import os
 import torch
 
+import acrv_datasets
+
 
 class BottomUpAttention(object):
     DATASETS = ['captions', 'vqa']
@@ -96,8 +98,26 @@ class BottomUpAttention(object):
         Trainer(output_directory).train(self.model)
 
 
-def _load_dataset(task, dataset_dir, mode):
-    pass
+def _load_dataset(task, dataset_dir, mode, quiet=False):
+    # Print some verbose information
+    if not quiet:
+        print("\nGETTING DATASET:")
+    if dataset_dir is None:
+        dataset_dir = acrv_datasets.get_datasets_directory()
+    if not quiet:
+        print("Using 'dataset_dir': %s" % dataset_dir)
+
+    # Defer to acrv_datasets for making sure required datasets are downloaded
+    acrv_datasets.get_datasets(['glove', 'caption_features/trainval2014_36'],
+                               datasets_directory=dataset_dir)
+    if not quiet:
+        print("\n")
+
+    # Ensure all required derived data exists
+    # TODO
+
+    # Return a PyTorch dataset with the appropriate wrappings
+    # TODO
 
 
 def _sanitise_arg(value, name, supported_list):
