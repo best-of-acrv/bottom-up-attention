@@ -1,9 +1,12 @@
+import acrv_datasets
 import numpy as np
 from PIL import Image
 import os
 import torch
 
-import acrv_datasets
+from .datasets import helpers as dh
+from .datasets.captioning import CaptionDataset
+from .datasets.vqa import VqaDataset
 
 
 class BottomUpAttention(object):
@@ -108,13 +111,21 @@ def _load_dataset(task, dataset_dir, mode, quiet=False):
         print("Using 'dataset_dir': %s" % dataset_dir)
 
     # Defer to acrv_datasets for making sure required datasets are downloaded
-    acrv_datasets.get_datasets(['glove', 'caption_features/trainval2014_36'],
-                               datasets_directory=dataset_dir)
+    datasets = [
+        'coco/vqa_questions_train', 'coco/vqa_questions_test',
+        'coco/vqa_questions_val', 'glove', 'caption_features/trainval2014_36'
+    ]
+    dirs = acrv_datasets.get_datasets(datasets, datasets_directory=dataset_dir)
     if not quiet:
         print("\n")
 
     # Ensure all required derived data exists
-    # TODO
+    # TODO glue this together
+    dh.create_dictionary(os.path.join(derived_dir, 'dictionary.pkl'), dirs[:3])
+    dh.create_glove_embeddings()
+    dh.compute_softscore()
+    dh.convert_detection_features()
+    dh.create_caption_input_data()
 
     # Return a PyTorch dataset with the appropriate wrappings
     # TODO

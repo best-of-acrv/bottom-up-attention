@@ -8,6 +8,7 @@ from torch.utils.data import Dataset
 
 
 class Dictionary(object):
+
     def __init__(self, word2idx=None, idx2word=None):
         if word2idx is None:
             word2idx = {}
@@ -26,7 +27,9 @@ class Dictionary(object):
 
     def tokenize(self, sentence, add_word):
         sentence = sentence.lower()
-        sentence = sentence.replace(',', '').replace('?', '').replace('\'s', ' \'s')
+        sentence = sentence.replace(',',
+                                    '').replace('?',
+                                                '').replace('\'s', ' \'s')
         words = sentence.split()
         tokens = []
         if add_word:
@@ -62,11 +65,12 @@ def _create_entry(img, question, answer):
     answer.pop('image_id')
     answer.pop('question_id')
     entry = {
-        'question_id' : question['question_id'],
-        'image_id'    : question['image_id'],
-        'image'       : img,
-        'question'    : question['question'],
-        'answer'      : answer}
+        'question_id': question['question_id'],
+        'image_id': question['image_id'],
+        'image': img,
+        'question': question['question'],
+        'answer': answer
+    }
     return entry
 
 
@@ -77,7 +81,8 @@ def _load_dataset(dataroot, name, img_id2val):
     dataroot: root path of dataset
     name: 'train', 'val'
     """
-    question_path = os.path.join(dataroot, 'coco', 'v2_OpenEnded_mscoco_%s2014_questions.json' % name)
+    question_path = os.path.join(
+        dataroot, 'coco', 'v2_OpenEnded_mscoco_%s2014_questions.json' % name)
     questions = sorted(json.load(open(question_path))['questions'],
                        key=lambda x: x['question_id'])
     answer_path = os.path.join(dataroot, 'cache', '%s_target.pkl' % name)
@@ -95,23 +100,30 @@ def _load_dataset(dataroot, name, img_id2val):
     return entries
 
 
-class VQAFeatureDataset(Dataset):
+class VqaDataset(Dataset):
+
     def __init__(self, name, dictionary, dataroot='../acrv-datasets/datasets'):
-        super(VQAFeatureDataset, self).__init__()
+        super(VqaDataset, self).__init__()
         assert name in ['train', 'val']
 
         # image directory
-        self.image_prefix = os.path.join(dataroot, 'coco', name + '2014', 'COCO_' + name + '2014_')
+        self.image_prefix = os.path.join(dataroot, 'coco', name + '2014',
+                                         'COCO_' + name + '2014_')
 
-        ans2label_path = os.path.join(dataroot, 'cache', 'trainval_ans2label.pkl')
-        label2ans_path = os.path.join(dataroot, 'cache', 'trainval_label2ans.pkl')
+        ans2label_path = os.path.join(dataroot, 'cache',
+                                      'trainval_ans2label.pkl')
+        label2ans_path = os.path.join(dataroot, 'cache',
+                                      'trainval_label2ans.pkl')
         self.ans2label = pickle.load(open(ans2label_path, 'rb'))
         self.label2ans = pickle.load(open(label2ans_path, 'rb'))
         self.num_ans_candidates = len(self.ans2label)
 
         self.dictionary = dictionary
 
-        self.img_id2idx = pickle.load(open(os.path.join(dataroot, 'trainval36', '%s36_imgid2idx.pkl' % name), 'rb'))
+        self.img_id2idx = pickle.load(
+            open(
+                os.path.join(dataroot, 'trainval36',
+                             '%s36_imgid2idx.pkl' % name), 'rb'))
         print('loading features from h5 file')
         h5_path = os.path.join(dataroot, 'trainval36', '%s36.hdf5' % name)
         with h5py.File(h5_path, 'r') as hf:
@@ -136,7 +148,8 @@ class VQAFeatureDataset(Dataset):
             tokens = tokens[:max_length]
             if len(tokens) < max_length:
                 # Note here we pad in front of the sentence
-                padding = [self.dictionary.padding_idx] * (max_length - len(tokens))
+                padding = [self.dictionary.padding_idx
+                          ] * (max_length - len(tokens))
                 tokens = padding + tokens
             assert_eq(len(tokens), max_length)
             entry['q_token'] = tokens
@@ -175,8 +188,14 @@ class VQAFeatureDataset(Dataset):
             target.scatter_(0, labels, scores)
 
         # create sample with question, answer, labels and score
-        sample = {'features': features, 'spatials': spatials, 'q_token': q_token, 'target': target,
-                  'image_id': entry['image_id'], 'question': entry['question']}
+        sample = {
+            'features': features,
+            'spatials': spatials,
+            'q_token': q_token,
+            'target': target,
+            'image_id': entry['image_id'],
+            'question': entry['question']
+        }
 
         return sample
 
