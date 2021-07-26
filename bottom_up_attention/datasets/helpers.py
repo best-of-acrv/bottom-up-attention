@@ -1,5 +1,6 @@
 import glob
 import json
+import numpy as np
 import os
 
 from .vqa import Dictionary
@@ -17,7 +18,7 @@ def create_caption_input_data():
     pass
 
 
-def make_dictionary(output_file, data_dirs):
+def make_dictionary(data_dirs, output_file):
     FILENAMES = [
         'v2_OpenEnded_mscoco_train2014_questions.json',
         'v2_OpenEnded_mscoco_val2014_questions.json',
@@ -37,5 +38,22 @@ def make_dictionary(output_file, data_dirs):
     d.dump_to_file(output_file)
 
 
-def create_glove_embeddings():
-    pass
+def make_glove_embeddings(dictionary_file, glove_dir, output_file):
+    # Load entries from appropriate glove file
+    EMBEDDING_DIM = 300
+    with open(os.path.join(glove_dir, 'glove.6B.%d.txt'), 'r') as f:
+        entries = f.readlines()
+
+    # Create dictionary of words & their embeddings, and generate weights
+    d = Dictionary.load_from_file(dictionary_file)
+    word2emb = {
+        e.split(' ')[0]: np.array([float(i) for i in e.split(' ')[1:]
+                                  ]) for e in entries
+    }
+    weights = np.zeros((len(d.idx2word), EMBEDDING_DIM), dtype=np.float32)
+    for i, word in enumerate(d.idx2word):
+        if word in word2emb:
+            weights[i] = word2emb[word]
+
+    # Write the results to file
+    np.save(output_file, weights)

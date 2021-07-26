@@ -121,8 +121,10 @@ def _load_dataset(task, dataset_dir, mode, quiet=False):
 
     # Ensure all required derived data exists
     # TODO glue this together
-    dh.make_dictionary(os.path.join(derived_dir, 'dictionary.pkl'), dirs[:3])
-    dh.create_glove_embeddings()
+    fn_dictionary = os.path.join(derived_dir, 'dictionary.pkl')
+    fn_embeddings = os.path.join(derived_dir, 'glove6b_init.npy')
+    dh.make_dictionary(dirs[:3], fn_dictionary)
+    dh.make_glove_embeddings(fn_dictionary, dirs[3], fn_embeddings)
     dh.compute_softscore()
     dh.convert_detection_features()
     dh.create_caption_input_data()
