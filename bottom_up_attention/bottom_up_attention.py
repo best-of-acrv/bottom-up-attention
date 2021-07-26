@@ -15,6 +15,7 @@ class BottomUpAttention(object):
 
     def __init__(self,
                  *,
+                 cache_dir=os.path.expanduser('~/.bottom-up-attention-cache'),
                  gpu_id=0,
                  load_pretrained=None,
                  load_snapshot=None,
@@ -23,10 +24,15 @@ class BottomUpAttention(object):
                  num_hidden_dims=1024,
                  task='captioning'):
         # Apply sanitised arguments
+        self.cache_dir = cache_dir
         self.gpu_id = gpu_id
         self.model_seed = model_seed
         self.num_hidden_dims = num_hidden_dims
         self.task = _sanitise_arg(task, 'task', BottomUpAttention.TASKS)
+
+        # Ensure cache exists
+        if not os.path.exists(self.cache_dir):
+            os.makedirs(self.cache_dir)
 
         # Try setting up GPU integration
         os.environ['CUDA_DEVICE_ORDER'] = 'PCI_BUS_ID'
@@ -94,14 +100,15 @@ class BottomUpAttention(object):
                   '~/bottom-up-attention-output'),
               snapshot_interval=5):
         # Load in the dataset
-        dataset = _load_dataset(self.task, dataset_dir, 'train')
+        dataset = _load_dataset(self.task, dataset_dir, self.cache_dir,
+                                'train')
 
         # Start a model trainer
         print("\nPERFORMING TRAINING:")
         Trainer(output_directory).train(self.model)
 
 
-def _load_dataset(task, dataset_dir, mode, quiet=False):
+def _load_dataset(task, dataset_dir, mode, cache_dir, quiet=False):
     # Print some verbose information
     if not quiet:
         print("\nGETTING DATASET:")
@@ -121,8 +128,8 @@ def _load_dataset(task, dataset_dir, mode, quiet=False):
 
     # Ensure all required derived data exists
     # TODO glue this together
-    fn_dictionary = os.path.join(derived_dir, 'dictionary.pkl')
-    fn_embeddings = os.path.join(derived_dir, 'glove6b_init.npy')
+    fn_dictionary = os.path.join(cache_dir, 'dictionary.pkl')
+    fn_embeddings = os.path.join(cache_dir, 'glove6b_init.npy')
     dh.make_dictionary(dirs[:3], fn_dictionary)
     dh.make_glove_embeddings(fn_dictionary, dirs[3], fn_embeddings)
     dh.compute_softscore()
