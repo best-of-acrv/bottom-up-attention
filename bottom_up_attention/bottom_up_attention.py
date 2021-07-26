@@ -121,7 +121,7 @@ def _load_dataset(task, dataset_dir, mode, quiet=False):
 
     # Ensure all required derived data exists
     # TODO glue this together
-    dh.create_dictionary(os.path.join(derived_dir, 'dictionary.pkl'), dirs[:3])
+    dh.make_dictionary(os.path.join(derived_dir, 'dictionary.pkl'), dirs[:3])
     dh.create_glove_embeddings()
     dh.compute_softscore()
     dh.convert_detection_features()
