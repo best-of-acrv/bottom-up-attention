@@ -133,7 +133,7 @@ def _load_dataset(task, dataset_dir, mode, cache_dir, quiet=False):
     fn_embeddings = os.path.join(cache_dir, 'glove6b_init.npy')
     dh.make_dictionary(dirs[:3], fn_dictionary)
     dh.make_glove_embeddings(fn_dictionary, dirs[5], fn_embeddings)
-    dh.compute_softscore(dirs[3:5], cache_dir)
+    dh.generate_softscores(dirs[3:5], cache_dir)
     dh.convert_detection_features()
     dh.create_caption_input_data()
 

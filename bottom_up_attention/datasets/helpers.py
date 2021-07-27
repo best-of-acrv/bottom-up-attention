@@ -1,4 +1,7 @@
+import base64
+import csv
 import glob
+import h5py
 import json
 import numpy as np
 import os
@@ -187,6 +190,20 @@ def _generate_targets(answers_dset, ans2label, name, output_dir):
     return target
 
 
+def _init_feature_h5py(output_filename, ids_count):
+    FEATURE_LENGTH = 2048
+    NUM_FIXED_BOXES = 36
+
+    f = h5py.File(output_filename, 'w')
+    return (f,
+            f.create_dataset('image_features',
+                             (ids_count, NUM_FIXED_BOXES, FEATURE_LENGTH),
+                             'f'),
+            f.create_dataset('image_bb', (ids_count, NUM_FIXED_BOXES, 4), 'f'),
+            f.create_dataset('spatial_features',
+                             (ids_count, NUM_FIXED_BOXES, 6), 'f'))
+
+
 def _list_jsons(search_dirs):
     jsons = []
     for d in search_dirs:
@@ -231,7 +248,7 @@ def _process_digit_article(inText):
     return outText
 
 
-def compute_softscore(data_dirs, output_dir):
+def generate_softscores(data_dirs, output_dir):
     # Load all required data from the data directories
     jsons = _list_jsons(data_dirs)
     train_answers = _load_from_jsons(jsons,
@@ -272,8 +289,91 @@ def compute_softscore(data_dirs, output_dir):
     _generate_targets(train_answers, ans2label, 'train', output_dir)
 
 
-def convert_detection_features():
-    pass
+def convert_detection_features(tsv_file, output_dir):
+    FIELD_NAMES = [
+        'image_id', 'image_w', 'image_h', 'num_boxes', 'boxes', 'features'
+    ]
+
+    # TODO load train_imgids and val_imgids???
+    train_imgids = []
+    val_imgids = []
+    train_indices = {}
+    val_indices = {}
+
+    (train, train_img_features, train_img_bb,
+     train_spatial_img_features) = _init_feature_h5py(
+         os.path.join(output_dir, 'train36.hdf5'), len(train_imgids))
+    (val, val_img_features, val_img_bb,
+     val_spatial_img_features) = _init_feature_h5py(
+         os.path.join(output_dir, 'val36.hdf5'), len(val_imgids))
+
+    train_counter = 0
+    val_counter = 0
+    print("reading tsv...")
+    with open(tsv_file) as f:
+        r = csv.DictReader(tsv_file, delimiter='\t', fieldnames=FIELD_NAMES)
+        for i in r:
+            i['num_boxes'] = int(i['num_boxes'])
+            image_id = int(i['image_id'])
+            image_w = float(i['image_w'])
+            image_h = float(i['image_h'])
+            bboxes = np.frombuffer(
+                base64.decodebytes(i['boxes'].encode('utf_8')),
+                dtype=np.float32).reshape((i['num_boxes'], -1))
+
+            box_width = bboxes[:, 2] - bboxes[:, 0]
+            box_height = bboxes[:, 3] - bboxes[:, 1]
+            scaled_width = box_width / image_w
+            scaled_height = box_height / image_h
+            scaled_x = bboxes[:, 0] / image_w
+            scaled_y = bboxes[:, 1] / image_h
+
+            box_width = box_width[..., np.newaxis]
+            box_height = box_height[..., np.newaxis]
+            scaled_width = scaled_width[..., np.newaxis]
+            scaled_height = scaled_height[..., np.newaxis]
+            scaled_x = scaled_x[..., np.newaxis]
+            scaled_y = scaled_y[..., np.newaxis]
+
+            spatial_features = np.concatenate(
+                (scaled_x, scaled_y, scaled_x + scaled_width,
+                 scaled_y + scaled_height, scaled_width, scaled_height),
+                axis=1)
+
+            if image_id in train_imgids:
+                train_imgids.remove(image_id)
+                train_indices[image_id] = train_counter
+                train_img_bb[train_counter, :, :] = bboxes
+                train_img_features[train_counter, :, :] = np.frombuffer(
+                    base64.decodebytes(i['features'].encode('utf_8')),
+                    dtype=np.float32).reshape((i['num_boxes'], -1))
+                train_spatial_img_features[
+                    train_counter, :, :] = spatial_features
+                train_counter += 1
+            elif image_id in val_imgids:
+                val_imgids.remove(image_id)
+                val_indices[image_id] = val_counter
+                val_img_bb[val_counter, :, :] = bboxes
+                val_img_features[val_counter, :, :] = np.frombuffer(
+                    base64.decodebytes(i['features'].encode('utf_8')),
+                    dtype=np.float32).reshape((i['num_boxes'], -1))
+                val_spatial_img_features[val_counter, :, :] = spatial_features
+                val_counter += 1
+            else:
+                assert False, 'Unknown image id: %d' % image_id
+
+    if len(train_imgids) != 0:
+        print('Warning: train_image_ids is not empty')
+    if len(val_imgids) != 0:
+        print('Warning: val_image_ids is not empty')
+
+    pickle.dump(train_indices,
+                open(os.path.join(output_dir, 'train36.hdf5'), 'wb'))
+    pickle.dump(val_indices, open(os.path.join(output_dir, 'val36.hdf5'),
+                                  'wb'))
+    train.close()
+    val.close()
+    print("Done!")
 
 
 def create_caption_input_data():
