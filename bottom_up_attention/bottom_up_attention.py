@@ -120,7 +120,8 @@ def _load_dataset(task, dataset_dir, mode, cache_dir, quiet=False):
     # Defer to acrv_datasets for making sure required datasets are downloaded
     datasets = [
         'coco/vqa_questions_train', 'coco/vqa_questions_test',
-        'coco/vqa_questions_val', 'glove', 'caption_features/trainval2014_36'
+        'coco/vqa_questions_val', 'coco/vqa_annotations_train',
+        'coco/vqa_annotations_val', 'glove', 'caption_features/trainval2014_36'
     ]
     dirs = acrv_datasets.get_datasets(datasets, datasets_directory=dataset_dir)
     if not quiet:
@@ -131,8 +132,8 @@ def _load_dataset(task, dataset_dir, mode, cache_dir, quiet=False):
     fn_dictionary = os.path.join(cache_dir, 'dictionary.pkl')
     fn_embeddings = os.path.join(cache_dir, 'glove6b_init.npy')
     dh.make_dictionary(dirs[:3], fn_dictionary)
-    dh.make_glove_embeddings(fn_dictionary, dirs[3], fn_embeddings)
-    dh.compute_softscore()
+    dh.make_glove_embeddings(fn_dictionary, dirs[5], fn_embeddings)
+    dh.compute_softscore(dirs[3:5], cache_dir)
     dh.convert_detection_features()
     dh.create_caption_input_data()
 
