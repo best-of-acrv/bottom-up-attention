@@ -48,7 +48,6 @@ class Attention(nn.Module):
 class DecoderWithAttention(nn.Module):
 
     def __init__(self,
-                 args,
                  attention_dim,
                  embed_dim,
                  decoder_dim,
@@ -89,8 +88,11 @@ class DecoderWithAttention(nn.Module):
         self.criterion_ce = nn.CrossEntropyLoss()
 
         # optimiser
+        self.optimiser = None
+
+    def attach_optimiser(self, learning_rate):
         self.optimiser = torch.optim.Adamax(self.parameters(),
-                                            lr=args.learning_rate)
+                                            lr=learning_rate)
 
     def init_weights(self):
 

@@ -26,8 +26,11 @@ class BaseModel(nn.Module):
         self.classifier = classifier
 
         # optimiser
+        self.optimiser = None
+
+    def attach_optimiser(self, learning_rate):
         self.optimiser = torch.optim.Adamax(self.parameters(),
-                                            lr=args.learning_rate)
+                                            lr=learning_rate)
 
     def forward(self, v, q):
         """Forward
