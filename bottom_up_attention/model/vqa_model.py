@@ -12,12 +12,11 @@ from .language_model import QuestionEmbedding, WordEmbedding
 
 class BaseModel(nn.Module):
 
-    def __init__(self, args, w_emb, q_emb, v_att, q_net, v_net, classifier):
+    def __init__(self, w_emb, q_emb, v_att, q_net, v_net, classifier):
         super(BaseModel, self).__init__()
 
         # check for cuda availability
         self.cuda_available = True if torch.cuda.is_available() else False
-        self.batch_size = args.batch_size
 
         self.w_emb = w_emb
         self.q_emb = q_emb
@@ -80,11 +79,11 @@ class BaseModel(nn.Module):
 
         return scores
 
-    def validate(self, dataset):
+    def validate(self, dataset, batch_size):
         score = 0
         upper_bound = 0
         dataloader = DataLoader(dataset,
-                                batch_size=self.batch_size,
+                                batch_size=batch_size,
                                 shuffle=False,
                                 num_workers=1)
 
@@ -164,17 +163,17 @@ pretrained_urls = {
 }
 
 
-def baseline(args, dataset, pretrained=False):
+def baseline(number_hidden_dims, pretrained=False):
 
     # initialise model
     w_emb = WordEmbedding(dataset.dictionary.ntoken, 300, 0.0)
-    q_emb = QuestionEmbedding(300, args.num_hid, 1, False, 0.0)
-    v_att = Attention(dataset.v_dim, q_emb.num_hid, args.num_hid)
-    q_net = FCNet([args.num_hid, args.num_hid])
-    v_net = FCNet([dataset.v_dim, args.num_hid])
-    classifier = SimpleClassifier(args.num_hid, 2 * args.num_hid,
+    q_emb = QuestionEmbedding(300, number_hidden_dims, 1, False, 0.0)
+    v_att = Attention(dataset.v_dim, q_emb.num_hid, number_hidden_dims)
+    q_net = FCNet([number_hidden_dims, number_hidden_dims])
+    v_net = FCNet([dataset.v_dim, number_hidden_dims])
+    classifier = SimpleClassifier(number_hidden_dims, 2 * number_hidden_dims,
                                   dataset.num_ans_candidates, 0.5)
-    model = BaseModel(args, w_emb, q_emb, v_att, q_net, v_net, classifier)
+    model = BaseModel(w_emb, q_emb, v_att, q_net, v_net, classifier)
 
     # load model on device if available
     map_location = None

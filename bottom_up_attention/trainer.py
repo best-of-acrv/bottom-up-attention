@@ -98,7 +98,7 @@ class Trainer(nn.Module):
             if epoch % eval_interval == 0 and dataset['val']:
                 # set model to eval first
                 model.eval()
-                recent_bleu4 = model.validate(dataset['val'])
+                recent_bleu4 = model.validate(dataset['val'], batch_size)
                 model.train()
             if recent_bleu4 is None:
                 raise ValueError(
@@ -190,7 +190,7 @@ class Trainer(nn.Module):
 
                 # set model to eval first
                 model.eval()
-                eval_score, bound = model.validate(dataset['val'])
+                eval_score, bound = model.validate(dataset['val'], batch_size)
                 print(
                     '[Epoch: {}] [Iter: {}] [eval_score: {:4f}] [upper_bound: {:4f}]'
                     .format(curr_epoch, curr_iteration + 1, eval_score * 100,

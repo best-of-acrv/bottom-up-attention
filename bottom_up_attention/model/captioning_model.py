@@ -205,9 +205,9 @@ class DecoderWithAttention(nn.Module):
 
         return loss, top5
 
-    def validate(self, dataset):
+    def validate(self, dataset, batch_size):
         dataloader = DataLoader(dataset,
-                                batch_size=500,
+                                batch_size=batch_size,
                                 shuffle=False,
                                 num_workers=1)
 
