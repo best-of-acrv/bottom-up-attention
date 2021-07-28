@@ -5,6 +5,7 @@ import os
 from PIL import Image
 import torch
 
+from .evaluator import Evaluator
 from .datasets import helpers as dh
 from .datasets.captioning import CaptionDataset
 from .datasets.vqa import Dictionary, VqaDataset
@@ -54,14 +55,18 @@ class BottomUpAttention(object):
             self.model = _get_model(self.num_hidden_dims)
         self.model.cuda()
 
-    def evaluate(self, *, dataset_dir=None, output_directory='./eval_output'):
+    def evaluate(self,
+                 *,
+                 batch_size=100,
+                 dataset_dir=None,
+                 output_directory='./eval_output'):
         # Load in the dataset
         dataset = _load_dataset(self.task, dataset_dir, 'eval', self.cache_dir)
 
         # Perform the requested evaluation
-        e = Evaluator(output_directory=output_directory)
-        fn = e.sample_vqa if self.task == 'vqa' else e.sample_captioning
-        fn(self.model, dataset)
+        Evaluator(batch_size=batch_size,
+                  output_directory=output_directory).sample(
+                      self.task, self.model, dataset)
 
     def predict(self, *, image=None, image_file=None, output_file=None):
         # Handle input arguments
