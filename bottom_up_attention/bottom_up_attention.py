@@ -135,12 +135,19 @@ def _load_dataset(task, dataset_dir, mode, cache_dir, quiet=False):
     # Ensure all required derived data exists
     fn_dictionary = os.path.join(cache_dir, 'dictionary.pkl')
     fn_embeddings = os.path.join(cache_dir, 'glove6b_init.npy')
+    fn_train_hd5 = os.path.join(cache_dir, 'train36.hdf5')
+    fn_val_hd5 = os.path.join(cache_dir, 'val36.hdf5')
+    fn_train_indices = os.path.join(cache_dir, 'train36_imgid2idx.pkl')
+    fn_val_indices = os.path.join(cache_dir, 'val36_imgid2idx.pkl')
+
     dh.make_dictionary([v for k, v in ds.items() if 'vqa_questions' in k],
                        fn_dictionary)
     dh.make_glove_embeddings(fn_dictionary, ds['glove'], fn_embeddings)
     dh.generate_softscores(
         [v for k, v in ds.items() if 'vqa_annotations' in k], cache_dir)
-    dh.convert_detection_features()
+    dh.generate_detection_features(ds['caption_features/trainval2014_36'],
+                                   fn_train_hd5, fn_val_hd5, fn_train_indices,
+                                   fn_val_indices)
     dh.make_caption_input_data()
 
     # Return a PyTorch dataset with the appropriate wrappings

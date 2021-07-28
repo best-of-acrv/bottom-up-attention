@@ -204,15 +204,15 @@ def _init_feature_h5py(output_filename, ids_count):
                              (ids_count, NUM_FIXED_BOXES, 6), 'f'))
 
 
-def _list_jsons(search_dirs):
-    jsons = []
+def _list_by_extension(search_dirs, ext='json'):
+    fs = []
     for d in search_dirs:
-        jsons.extend(glob.glob(os.path.join(d, '**/*.json'), recursive=True))
-    return jsons
+        fs.extend(glob.glob(os.path.join(d, '**/*.%s' % ext), recursive=True))
+    return fs
 
 
 def _load_from_jsons(jsons, filename):
-    return json.load(open(next(j for j in jsons if j.endswith(filename))))
+    return json.load(open(_select_file_from_list(jsons, filename)))
 
 
 def _preprocess_answer(answer):
@@ -248,48 +248,13 @@ def _process_digit_article(inText):
     return outText
 
 
-def generate_softscores(data_dirs, output_dir):
-    # Load all required data from the data directories
-    jsons = _list_jsons(data_dirs)
-    train_answers = _load_from_jsons(jsons,
-                                     'v2_mscoco_train2014_annotations.json')
-    val_answers = _load_from_jsons(jsons, 'v2_mscoco_val2014_annotations.json')
-    answers = train_answers + val_answers
-
-    # Filter out answers that don't appear at least 9 times
-    # (no idea why 9...)
-    MIN_OCCURENCE = 9
-    occurence = {}
-    for a in answers:
-        gtruth = _preprocess_answer(a['multiple_choice_answer'])
-        if gtruth not in occurence:
-            occurence[gtruth] = set()
-        occurence[gtruth].add(a['question_id'])
-    for a in list(occurence):
-        if len(occurence[a]) < MIN_OCCURENCE:
-            occurence.pop(a)
-    print('Num of answers that appear >= %d times: %d' %
-          (MIN_OCCURENCE, len(occurence)))
-
-    # Create ans2label & label2ans pickles for trainval
-    NAME = 'trainval'
-    ans2label = {}
-    label2ans = []
-    label = 0
-    for a in occurence:
-        label2ans.append(a)
-        ans2label[a] = label
-        label += 1
-    pickle.dump(ans2label,
-                open(os.path.join(output_dir, NAME + '_ans2label.pkl'), 'wb'))
-    pickle.dump(label2ans,
-                open(os.path.join(output_dir, NAME + '_label2ans.pkl'), 'wb'))
-
-    # Generate targets for train & val
-    _generate_targets(train_answers, ans2label, 'train', output_dir)
+def _select_file_from_list(files, filename):
+    return next(f for f in files if f.endswith(filename))
 
 
-def convert_detection_features(tsv_file, output_dir):
+def generate_detection_features(trainval36_dir, output_train_hdf5,
+                                output_val_hdtsv_filef5, output_train_indices,
+                                output_val_indices):
     FIELD_NAMES = [
         'image_id', 'image_w', 'image_h', 'num_boxes', 'boxes', 'features'
     ]
@@ -301,17 +266,19 @@ def convert_detection_features(tsv_file, output_dir):
     val_indices = {}
 
     (train, train_img_features, train_img_bb,
-     train_spatial_img_features) = _init_feature_h5py(
-         os.path.join(output_dir, 'train36.hdf5'), len(train_imgids))
+     train_spatial_img_features) = _init_feature_h5py(output_train_hdf5,
+                                                      len(train_imgids))
     (val, val_img_features, val_img_bb,
-     val_spatial_img_features) = _init_feature_h5py(
-         os.path.join(output_dir, 'val36.hdf5'), len(val_imgids))
+     val_spatial_img_features) = _init_feature_h5py(output_val_hdf5,
+                                                    len(val_imgids))
 
     train_counter = 0
     val_counter = 0
     print("reading tsv...")
-    with open(tsv_file) as f:
-        r = csv.DictReader(tsv_file, delimiter='\t', fieldnames=FIELD_NAMES)
+    with open(
+            _select_file_from_list(_list_by_extension(trainval36_dir, 'tsv'),
+                                   'genome_36.tsv'), 'r') as f:
+        r = csv.DictReader(f, delimiter='\t', fieldnames=FIELD_NAMES)
         for i in r:
             i['num_boxes'] = int(i['num_boxes'])
             image_id = int(i['image_id'])
@@ -367,16 +334,60 @@ def convert_detection_features(tsv_file, output_dir):
     if len(val_imgids) != 0:
         print('Warning: val_image_ids is not empty')
 
-    pickle.dump(train_indices,
-                open(os.path.join(output_dir, 'train36.hdf5'), 'wb'))
-    pickle.dump(val_indices, open(os.path.join(output_dir, 'val36.hdf5'),
-                                  'wb'))
     train.close()
     val.close()
+    with open(output_train_indices, 'wb') as f:
+        pickle.dump(train_indices, f)
+    with open(output_val_indices, 'wb') as f:
+        pickle.dump(val_indices, f)
     print("Done!")
 
 
-def create_caption_input_data():
+def generate_softscores(data_dirs, output_dir):
+    # Load all required data from the data directories
+    jsons = _list_by_extension(data_dirs)
+    train_answers = _load_from_jsons(jsons,
+                                     'v2_mscoco_train2014_annotations.json')
+    val_answers = _load_from_jsons(jsons, 'v2_mscoco_val2014_annotations.json')
+    answers = train_answers + val_answers
+
+    # Filter out answers that don't appear at least 9 times
+    # (no idea why 9...)
+    MIN_OCCURENCE = 9
+    occurence = {}
+    for a in answers:
+        gtruth = _preprocess_answer(a['multiple_choice_answer'])
+        if gtruth not in occurence:
+            occurence[gtruth] = set()
+        occurence[gtruth].add(a['question_id'])
+    for a in list(occurence):
+        if len(occurence[a]) < MIN_OCCURENCE:
+            occurence.pop(a)
+    print('Num of answers that appear >= %d times: %d' %
+          (MIN_OCCURENCE, len(occurence)))
+
+    # Create ans2label & label2ans pickles for trainval
+    NAME = 'trainval'
+    ans2label = {}
+    label2ans = []
+    label = 0
+    for a in occurence:
+        label2ans.append(a)
+        ans2label[a] = label
+        label += 1
+    pickle.dump(ans2label,
+                open(os.path.join(output_dir, NAME + '_ans2label.pkl'), 'wb'))
+    pickle.dump(label2ans,
+                open(os.path.join(output_dir, NAME + '_label2ans.pkl'), 'wb'))
+
+    # Generate targets for train & val
+    _generate_targets(train_answers, ans2label, 'train', output_dir)
+
+
+def make_caption_input_data(cache_dir, captions_dir, output_dir):
+    # Read in data
+    data = _load_from_jsons(_list_by_extension(captions_dir),
+                            'dataset_coco.json')
     pass
 
 
@@ -387,7 +398,7 @@ def make_dictionary(data_dirs, output_file):
         'v2_OpenEnded_mscoco_test2015_questions.json',
         'v2_OpenEnded_mscoco_test-dev2015_questions.json'
     ]
-    jsons = _list_jsons(data_dirs)
+    jsons = _list_by_extension(data_dirs)
     d = Dictionary()
     for f in FILENAMES:
         for q in _load_from_jsons(jsons, f)['questions']:
