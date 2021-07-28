@@ -13,6 +13,7 @@ setup(name='bottom-up-attention',
       long_description=long_description,
       long_description_content_type='text/markdown',
       packages=find_packages(),
+      package_data={'bottom_up_attention': ['*.pkl']},
       install_requires=['acrv_datasets'],
       entry_points={
           'console_scripts': [
