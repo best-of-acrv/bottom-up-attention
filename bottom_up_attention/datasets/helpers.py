@@ -1,4 +1,5 @@
 import base64
+from collections import Counter
 import csv
 import glob
 import h5py
@@ -6,7 +7,9 @@ import json
 import numpy as np
 import os
 import pickle
+from random import choice, sample
 import re
+from tqdm import tqdm
 
 from .vqa import Dictionary
 
@@ -384,11 +387,142 @@ def generate_softscores(data_dirs, output_dir):
     _generate_targets(train_answers, ans2label, 'train', output_dir)
 
 
-def make_caption_input_data(cache_dir, captions_dir, output_dir):
+def make_caption_input_data(captions_dir, input_train_indices,
+                            input_val_indices, output_dir):
+    # Constants from old code??
+    CAPTIONS_PER_IMAGE = 5
+    MAX_LEN = 50
+    MIN_WORD_FREQ = 5
+
+    # Declare a nested fn for all our JSON dumping.... yuck
+    def __dump_json(data, filename):
+        with open(
+                os.path.join(
+                    output_dir,
+                    '%s_coco_%d_cap_per_img_%d_min_word_freq.json' %
+                    (filename, CAPTIONS_PER_IMAGE, MIN_WORD_FREQ))) as f:
+            json.dump(data, f)
+
     # Read in data
     data = _load_from_jsons(_list_by_extension(captions_dir),
                             'dataset_coco.json')
-    pass
+    with open(input_train_indices, 'rb') as f:
+        train_data = pickle.load(f)
+    with open(input_val_indices, 'rb') as f:
+        val_data = pickle.load(f)
+
+    # Read image paths and captions for each image
+    train_image_ids = []
+    val_image_ids = []
+    test_image_ids = []
+    train_image_captions = []
+    val_image_captions = []
+    test_image_captions = []
+    train_image_det = []
+    val_image_det = []
+    test_image_det = []
+    word_freq = Counter()
+
+    for img in data['images']:
+        captions = []
+        for c in img['sentences']:
+            # Update word frequency
+            word_freq.update(c['tokens'])
+            if len(c['tokens']) <= MAX_LEN:
+                captions.append(c['tokens'])
+
+        if len(captions) == 0:
+            continue
+
+        filename = img['filename']
+        image_id = img['filename'].split('_')[2]
+        image_id = int(image_id.lstrip("0").split('.')[0])
+
+        if img['split'] in {'train', 'restval'}:
+            if img['filepath'] == 'train2014':
+                if image_id in train_data:
+                    train_image_det.append(("t", train_data[image_id]))
+            else:
+                if image_id in val_data:
+                    train_image_det.append(("v", val_data[image_id]))
+            train_image_captions.append(captions)
+            train_image_ids.append(filename)
+        elif img['split'] in {'val'}:
+            if image_id in val_data:
+                val_image_det.append(("v", val_data[image_id]))
+            val_image_captions.append(captions)
+            val_image_ids.append(filename)
+        elif img['split'] in {'test'}:
+            if image_id in val_data:
+                test_image_det.append(("v", val_data[image_id]))
+            test_image_captions.append(captions)
+            test_image_ids.append(filename)
+
+    # Sanity check
+    assert len(train_image_det) == len(train_image_captions) == len(
+        train_image_ids)
+    assert len(val_image_det) == len(val_image_captions) == len(val_image_ids)
+    assert len(test_image_det) == len(test_image_captions) == len(
+        test_image_ids)
+
+    # Create word map & save to JSON
+    words = [w for w in word_freq.keys() if word_freq[w] > MIN_WORD_FREQ]
+    word_map = {k: v + 1 for v, k in enumerate(words)}
+    word_map['<unk>'] = len(word_map) + 1
+    word_map['<start>'] = len(word_map) + 1
+    word_map['<end>'] = len(word_map) + 1
+    word_map['<pad>'] = 0
+
+    __dump_json(word_map, 'WORDMAP')
+
+    for impaths, imcaps, imids, split in [
+        (train_image_det, train_image_captions, train_image_ids, 'TRAIN'),
+        (val_image_det, val_image_captions, val_image_ids, 'VAL'),
+        (test_image_det, test_image_captions, test_image_ids, 'TEST')
+    ]:
+        enc_captions = []
+        caplens = []
+
+        for i, path in enumerate(tqdm(impaths)):
+            # Sample captions
+            if len(imcaps[i]) < CAPTIONS_PER_IMAGE:
+                captions = imcaps[i] + [
+                    choice(imcaps[i])
+                    for _ in range(CAPTIONS_PER_IMAGE - len(imcaps[i]))
+                ]
+            else:
+                captions = sample(imcaps[i], k=CAPTIONS_PER_IMAGE)
+
+            # Sanity check
+            assert len(captions) == CAPTIONS_PER_IMAGE
+
+            for j, c in enumerate(captions):
+                # Encode captions
+                enc_c = (
+                    [word_map['<start>']] +
+                    [word_map.get(word, word_map['<unk>']) for word in c] +
+                    [word_map['<end>']] + [word_map['<pad>']] *
+                    (MAX_LEN - len(c)))
+
+                # Find caption lengths
+                c_len = len(c) + 2
+
+                enc_captions.append(enc_c)
+                caplens.append(c_len)
+
+        # Save encoded captions and their lengths to JSON files
+        __dump_json(enc_captions, '%s_CAPTIONS' % split)
+        __dump_json(caplens, '%s_CAPLENS' % split)
+
+    # Save bottom up features indexing to JSON files
+    __dump_json(train_image_det, 'TRAIN_GENOME_DETS')
+    __dump_json(val_image_det, 'VAL_GENOME_DETS')
+    __dump_json(test_image_det, 'TEST_GENOME_DETS')
+
+    # Save image IDs to JSON files
+    __dump_json(train_image_ids, 'TRAIN_IMAGE_IDS')
+    __dump_json(val_image_ids, 'VAL_IMAGE_IDS')
+    __dump_json(test_image_ids, 'TEST_IMAGE_IDS')
 
 
 def make_dictionary(data_dirs, output_file):
