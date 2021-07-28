@@ -2,14 +2,16 @@ import os
 import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader
-from helpers.download_helper import download_model
-from helpers.model_helper import find_snapshot
-from model.attention import Attention, NewAttention
-from model.language_model import WordEmbedding, QuestionEmbedding
-from model.classifier import SimpleClassifier
-from model.fc import FCNet
+
+from .attention import Attention
+from .classifier import SimpleClassifier
+from .fc import FCNet
+from .helpers import download_model, find_snapshot
+from .language_model import QuestionEmbedding, WordEmbedding
+
 
 class BaseModel(nn.Module):
+
     def __init__(self, args, w_emb, q_emb, v_att, q_net, v_net, classifier):
         super(BaseModel, self).__init__()
 
@@ -25,7 +27,8 @@ class BaseModel(nn.Module):
         self.classifier = classifier
 
         # optimiser
-        self.optimiser = torch.optim.Adamax(self.parameters(), lr=args.learning_rate)
+        self.optimiser = torch.optim.Adamax(self.parameters(),
+                                            lr=args.learning_rate)
 
     def forward(self, v, q):
         """Forward
@@ -73,14 +76,17 @@ class BaseModel(nn.Module):
         if self.cuda_available:
             one_hots = one_hots.cuda()
         one_hots.scatter_(1, logits.view(-1, 1), 1)
-        scores = one_hots*labels
+        scores = one_hots * labels
 
         return scores
 
     def validate(self, dataset):
         score = 0
         upper_bound = 0
-        dataloader = DataLoader(dataset, batch_size=self.batch_size, shuffle=False, num_workers=1)
+        dataloader = DataLoader(dataset,
+                                batch_size=self.batch_size,
+                                shuffle=False,
+                                num_workers=1)
 
         with torch.no_grad():
             for batch in dataloader:
@@ -96,7 +102,8 @@ class BaseModel(nn.Module):
 
                 # compute logits
                 output = self.forward(features, q_token)
-                batch_score = self.compute_score_with_logits(output, answer).sum()
+                batch_score = self.compute_score_with_logits(output,
+                                                             answer).sum()
                 score += batch_score
                 upper_bound += (answer.max(dim=1)[0]).sum()
 
@@ -112,7 +119,9 @@ class BaseModel(nn.Module):
             'global_iteration': global_iteration
         }
 
-        model_path = os.path.join(log_directory, 'snapshots', 'model-{:06d}.pth.tar'.format(global_iteration))
+        model_path = os.path.join(
+            log_directory, 'snapshots',
+            'model-{:06d}.pth.tar'.format(global_iteration))
         print('Creating Snapshot: ' + model_path)
         torch.save(model, model_path)
 
@@ -125,13 +134,17 @@ class BaseModel(nn.Module):
             map_location = torch.device('cpu')
 
         if model_name is None:
-            print('Model not found: initialising using default PyTorch initialisation!')
+            print(
+                'Model not found: initialising using default PyTorch initialisation!'
+            )
             # uses pytorch default initialisation
             return 0
         # load model if snapshot was found
         else:
-            full_model = torch.load(os.path.join(snapshot_dir, model_name), map_location=map_location)
-            print('Loading model from: ' + os.path.join(snapshot_dir, model_name))
+            full_model = torch.load(os.path.join(snapshot_dir, model_name),
+                                    map_location=map_location)
+            print('Loading model from: ' +
+                  os.path.join(snapshot_dir, model_name))
             self.load_state_dict(full_model['model'], strict=False)
             if with_optim:
                 self.optimiser.load_state_dict(full_model['optimiser'])
@@ -146,8 +159,10 @@ class BaseModel(nn.Module):
 
 
 pretrained_urls = {
-    'baseline-vqa': 'https://cloudstor.aarnet.edu.au/plus/s/a0b8IH8h0ZnCvAZ/download',
+    'baseline-vqa':
+        'https://cloudstor.aarnet.edu.au/plus/s/a0b8IH8h0ZnCvAZ/download',
 }
+
 
 def baseline(args, dataset, pretrained=False):
 
@@ -157,7 +172,8 @@ def baseline(args, dataset, pretrained=False):
     v_att = Attention(dataset.v_dim, q_emb.num_hid, args.num_hid)
     q_net = FCNet([args.num_hid, args.num_hid])
     v_net = FCNet([dataset.v_dim, args.num_hid])
-    classifier = SimpleClassifier(args.num_hid, 2*args.num_hid, dataset.num_ans_candidates, 0.5)
+    classifier = SimpleClassifier(args.num_hid, 2 * args.num_hid,
+                                  dataset.num_ans_candidates, 0.5)
     model = BaseModel(args, w_emb, q_emb, v_att, q_net, v_net, classifier)
 
     # load model on device if available
@@ -169,7 +185,9 @@ def baseline(args, dataset, pretrained=False):
     if pretrained:
         key = 'baseline-vqa'
         url = pretrained_urls[key]
-        model.load_state_dict(download_model(key, url, map_location=map_location)['model'], strict=False)
+        model.load_state_dict(download_model(
+            key, url, map_location=map_location)['model'],
+                              strict=False)
     else:
         key = 'untrained'
 
@@ -177,5 +195,3 @@ def baseline(args, dataset, pretrained=False):
     model.name = key
 
     return model
-
-
