@@ -10,13 +10,19 @@ class CaptionDataset(Dataset):
     A PyTorch Dataset class to be used in a PyTorch DataLoader to create batches.
     """
 
-    def __init__(self, name, dataroot='../acrv-datasets/datasets', data_name='coco_5_cap_per_img_5_min_word_freq', transform=None):
+    def __init__(self,
+                 name,
+                 dataroot,
+                 data_name='coco_5_cap_per_img_5_min_word_freq',
+                 transform=None):
         """
         :param data_folder: folder where data files are stored
         :param data_name: base name of processed datasets
         :param split: split, one of 'TRAIN', 'VAL', or 'TEST'
         :param transform: image transform pipeline
         """
+        self.word_map = None
+
         self.split = name.upper()
         assert self.split in {'TRAIN', 'VAL', 'TEST'}
 
@@ -26,28 +32,43 @@ class CaptionDataset(Dataset):
         self.image_prefix = os.path.join(dataroot, 'coco', name + '2014')
 
         # Open hdf5 file where image features are stored
-        self.train_hf = h5py.File(os.path.join(dataroot, 'trainval36', 'train36.hdf5'), 'r')
+        self.train_hf = h5py.File(
+            os.path.join(dataroot, 'trainval36', 'train36.hdf5'), 'r')
         self.train_features = self.train_hf['image_features']
-        self.val_hf = h5py.File(os.path.join(dataroot, 'trainval36', 'val36.hdf5'), 'r')
+        self.val_hf = h5py.File(
+            os.path.join(dataroot, 'trainval36', 'val36.hdf5'), 'r')
         self.val_features = self.val_hf['image_features']
 
         # Captions per image
         self.cpi = 5
 
         # Load encoded captions
-        with open(os.path.join(dataroot, 'coco', 'captions', self.split + '_CAPTIONS_' + data_name + '.json'), 'r') as j:
+        with open(
+                os.path.join(dataroot, 'coco', 'captions',
+                             self.split + '_CAPTIONS_' + data_name + '.json'),
+                'r') as j:
             self.captions = json.load(j)
 
         # Load caption lengths
-        with open(os.path.join(dataroot, 'coco', 'captions', self.split + '_CAPLENS_' + data_name + '.json'), 'r') as j:
+        with open(
+                os.path.join(dataroot, 'coco', 'captions',
+                             self.split + '_CAPLENS_' + data_name + '.json'),
+                'r') as j:
             self.caplens = json.load(j)
 
         # Load bottom up image features distribution
-        with open(os.path.join(dataroot, 'coco', 'captions', self.split + '_GENOME_DETS_' + data_name + '.json'), 'r') as j:
+        with open(
+                os.path.join(
+                    dataroot, 'coco', 'captions',
+                    self.split + '_GENOME_DETS_' + data_name + '.json'),
+                'r') as j:
             self.objdet = json.load(j)
 
         # Load image ids
-        with open(os.path.join(dataroot, 'coco', 'captions', self.split + '_IMAGE_IDS_' + data_name + '.json'), 'r') as j:
+        with open(
+                os.path.join(dataroot, 'coco', 'captions',
+                             self.split + '_IMAGE_IDS_' + data_name + '.json'),
+                'r') as j:
             self.imageids = json.load(j)
 
         # PyTorch transformation pipeline for the image (normalizing, etc.)
@@ -73,11 +94,19 @@ class CaptionDataset(Dataset):
         caplen = torch.LongTensor([self.caplens[index]])
 
         # create sample with question, answer, labels and score
-        sample = {'features': img, 'caption': caption, 'caption_len': caplen, 'imageid': imageid}
+        sample = {
+            'features': img,
+            'caption': caption,
+            'caption_len': caplen,
+            'imageid': imageid
+        }
 
         if self.split != 'TRAIN':
             # For validation or testing, also return all 'captions_per_image' captions to find BLEU-4 score
-            all_captions = torch.LongTensor(self.captions[((index // self.cpi) * self.cpi):(((index // self.cpi) * self.cpi) + self.cpi)])
+            all_captions = torch.LongTensor(
+                self.captions[((index // self.cpi) *
+                               self.cpi):(((index // self.cpi) * self.cpi) +
+                                          self.cpi)])
             sample['all_captions'] = all_captions
 
         return sample

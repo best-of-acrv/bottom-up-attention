@@ -1,12 +1,13 @@
 import acrv_datasets
+import json
 import numpy as np
-from PIL import Image
 import os
+from PIL import Image
 import torch
 
 from .datasets import helpers as dh
 from .datasets.captioning import CaptionDataset
-from .datasets.vqa import VqaDataset
+from .datasets.vqa import Dictionary, VqaDataset
 
 
 class BottomUpAttention(object):
@@ -148,11 +149,48 @@ def _load_dataset(task, dataset_dir, mode, cache_dir, quiet=False):
     dh.generate_detection_features(ds['caption_features/trainval2014_36'],
                                    fn_train_hd5, fn_val_hd5, fn_train_indices,
                                    fn_val_indices)
-    dh.make_caption_input_data(ds['caption_features/trainval2014_36'],
-                               fn_train_indices, fn_val_indices, cache_dir)
+    caption_name = dh.make_caption_input_data(
+        ds['caption_features/trainval2014_36'], fn_train_indices,
+        fn_val_indices, cache_dir)
 
-    # Return a PyTorch dataset with the appropriate wrappings
-    # TODO
+    # Load any required PyTorch dataset with the appropriate wrappings
+    train_dataset = None
+    test_dataset = None
+    eval_dataset = None
+    mode = mode.lower()
+    if task == BottomUpAttention.TASKS[0]:
+        # Captioning
+        with open(os.path.join(cache_dir, 'WORDMAP_%s.json' % caption_name),
+                  'r') as f:
+            word_map = json.load(f)
+        if mode == 'train':
+            train_dataset = CaptionDataset(mode, cache_dir, caption_name)
+            train_dataset.word_map = word_map
+        elif mode == 'test':
+            # TODO when is this ever even going to be called?!?!
+            train_dataset = CaptionDataset(mode, cache_dir, caption_name)
+            train_dataset.word_map = word_map
+        eval_dataset = CaptionDataset(mode, cache_dir, caption_name)
+        eval_dataset.word_map = word_map
+    elif task == BottomUpAttention.TASKS[1]:
+        # VQA
+        d = Dictionary.load_from_file(fn_dictionary)
+        if mode == 'train':
+            train_dataset = VqaDataset('train', d)
+        eval_dataset = VqaDataset('val', d)
+
+    # Return a dataset bundle with all found datasets
+    return {
+        **({} if train_dataset is None else {
+               'train': train_dataset
+           }),
+        **({} if test_dataset is None else {
+               'test': test_dataset
+           }),
+        **({} if eval_dataset is None else {
+               'val': eval_dataset
+           }),
+    }
 
 
 def _sanitise_arg(value, name, supported_list):

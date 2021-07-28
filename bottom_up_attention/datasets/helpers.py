@@ -393,14 +393,13 @@ def make_caption_input_data(captions_dir, input_train_indices,
     CAPTIONS_PER_IMAGE = 5
     MAX_LEN = 50
     MIN_WORD_FREQ = 5
+    NAME = ('coco_%d_cap_per_img_%d_min_word_freq' %
+            (CAPTIONS_PER_IMAGE, MIN_WORD_FREQ))
 
     # Declare a nested fn for all our JSON dumping.... yuck
     def __dump_json(data, filename):
-        with open(
-                os.path.join(
-                    output_dir,
-                    '%s_coco_%d_cap_per_img_%d_min_word_freq.json' %
-                    (filename, CAPTIONS_PER_IMAGE, MIN_WORD_FREQ))) as f:
+        with open(os.path.join(output_dir,
+                               '%s_%s.json' % (filename, NAME))) as f:
             json.dump(data, f)
 
     # Read in data
@@ -523,6 +522,8 @@ def make_caption_input_data(captions_dir, input_train_indices,
     __dump_json(train_image_ids, 'TRAIN_IMAGE_IDS')
     __dump_json(val_image_ids, 'VAL_IMAGE_IDS')
     __dump_json(test_image_ids, 'TEST_IMAGE_IDS')
+
+    return NAME
 
 
 def make_dictionary(data_dirs, output_file):
