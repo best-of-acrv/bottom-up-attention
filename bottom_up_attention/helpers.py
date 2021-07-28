@@ -2,6 +2,7 @@ import os
 import errno
 import torch.nn as nn
 
+
 class AverageMeter(object):
     """
     Keeps track of most recent, average, sum, and count of a metric.
@@ -22,8 +23,10 @@ class AverageMeter(object):
         self.count += n
         self.avg = self.sum / self.count
 
+
 def assert_eq(real, expected):
     assert real == expected, '%s (true) vs %s (expected)' % (real, expected)
+
 
 def weights_init(m):
     """custom weights initialization."""
@@ -36,6 +39,7 @@ def weights_init(m):
     else:
         print('%s is not initialized.' % cname)
 
+
 def create_dir(path):
     if not os.path.exists(path):
         try:
@@ -43,6 +47,7 @@ def create_dir(path):
         except OSError as exc:
             if exc.errno != errno.EEXIST:
                 raise
+
 
 def adjust_learning_rate(optimizer, shrink_factor):
     """
@@ -55,6 +60,7 @@ def adjust_learning_rate(optimizer, shrink_factor):
     for param_group in optimizer.param_groups:
         param_group['lr'] = param_group['lr'] * shrink_factor
     print("The new learning rate is %f\n" % (optimizer.param_groups[0]['lr'],))
+
 
 def accuracy(scores, targets, k):
     """

@@ -2,7 +2,8 @@ import timeit
 import os
 import torch.nn as nn
 from torch.utils.data import DataLoader
-from helpers.ops import AverageMeter, adjust_learning_rate
+
+from .helpers import AverageMeter, adjust_learning_rate
 
 
 def get_lr(optimizer):
