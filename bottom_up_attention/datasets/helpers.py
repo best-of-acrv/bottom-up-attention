@@ -7,6 +7,7 @@ import json
 import numpy as np
 import os
 import pickle
+import pkg_resources
 from random import choice, sample
 import re
 from tqdm import tqdm
@@ -256,15 +257,16 @@ def _select_file_from_list(files, filename):
 
 
 def generate_detection_features(trainval36_dir, output_train_hdf5,
-                                output_val_hdtsv_filef5, output_train_indices,
+                                output_val_hdf5, output_train_indices,
                                 output_val_indices):
     FIELD_NAMES = [
         'image_id', 'image_w', 'image_h', 'num_boxes', 'boxes', 'features'
     ]
 
-    # TODO load train_imgids and val_imgids???
-    train_imgids = []
-    val_imgids = []
+    with open('/'.join(('datasets', 'train_ids.pkl')), 'rb') as f:
+        train_imgids = pickle.load(f)
+    with open('/'.join(('datasets', 'val_ids.pkl')), 'rb') as f:
+        val_imgids = pickle.load(f)
     train_indices = {}
     val_indices = {}
 
