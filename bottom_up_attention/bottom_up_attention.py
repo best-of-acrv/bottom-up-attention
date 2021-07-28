@@ -56,7 +56,7 @@ class BottomUpAttention(object):
 
     def evaluate(self, *, dataset_dir=None, output_directory='./eval_output'):
         # Load in the dataset
-        dataset = _load_dataset(self.task, dataset_dir, 'eval')
+        dataset = _load_dataset(self.task, dataset_dir, 'eval', self.cache_dir)
 
         # Perform the requested evaluation
         e = Evaluator(output_directory=output_directory)
