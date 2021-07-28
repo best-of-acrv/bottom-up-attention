@@ -9,6 +9,8 @@ from .evaluator import Evaluator
 from .datasets import helpers as dh
 from .datasets.captioning import CaptionDataset
 from .datasets.vqa import Dictionary, VqaDataset
+from .model import captioning_model
+from .model import vqa_model
 from .trainer import Trainer
 
 
@@ -118,6 +120,17 @@ class BottomUpAttention(object):
                                         eval_interval=eval_interval,
                                         max_epochs=max_epochs,
                                         snapshot_interval=snapshot_interval)
+
+
+def _get_model(task):
+    m = (captioning_model.baseline
+         if task == BottomUpAttention.TASKS[0] else vqa_model.baseline)()
+    if task == BottomUpAttention.TASKS[1]:
+        m.w_emb.init_embedding(
+            os.path.join(
+                acrv_datasets.get_datasets('glove')[0],
+                'glove6b_init_300d.npy'))
+    return m
 
 
 def _load_dataset(task, dataset_dir, mode, cache_dir, quiet=False):
