@@ -8,6 +8,7 @@ import torch
 from .datasets import helpers as dh
 from .datasets.captioning import CaptionDataset
 from .datasets.vqa import Dictionary, VqaDataset
+from .trainer import Trainer
 
 
 class BottomUpAttention(object):
@@ -90,12 +91,11 @@ class BottomUpAttention(object):
 
     def train(self,
               *,
+              batch_size=100,
               dataset_dir=None,
               display_interval=100,
               eval_interval=1,
-              learning_rate=2e-3,
               max_epochs=50,
-              num_workers=1,
               output_directory=os.path.expanduser(
                   '~/bottom-up-attention-output'),
               snapshot_interval=5):
@@ -105,7 +105,14 @@ class BottomUpAttention(object):
 
         # Start a model trainer
         print("\nPERFORMING TRAINING:")
-        Trainer(output_directory).train(self.model)
+        Trainer(output_directory).train(self.model,
+                                        self.task,
+                                        dataset,
+                                        batch_size=batch_size,
+                                        display_interval=display_interval,
+                                        eval_interval=eval_interval,
+                                        max_epochs=max_epochs,
+                                        snapshot_interval=snapshot_interval)
 
 
 def _load_dataset(task, dataset_dir, mode, cache_dir, quiet=False):
