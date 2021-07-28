@@ -11,7 +11,6 @@ from .datasets.vqa import Dictionary, VqaDataset
 
 
 class BottomUpAttention(object):
-    DATASETS = ['captions', 'vqa']
     TASKS = ['captioning', 'vqa']
 
     def __init__(self,
