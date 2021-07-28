@@ -148,7 +148,8 @@ def _load_dataset(task, dataset_dir, mode, cache_dir, quiet=False):
     dh.generate_detection_features(ds['caption_features/trainval2014_36'],
                                    fn_train_hd5, fn_val_hd5, fn_train_indices,
                                    fn_val_indices)
-    dh.make_caption_input_data()
+    dh.make_caption_input_data(ds['caption_features/trainval2014_36'],
+                               fn_train_indices, fn_val_indices, cache_dir)
 
     # Return a PyTorch dataset with the appropriate wrappings
     # TODO
