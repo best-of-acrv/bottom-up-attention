@@ -2,10 +2,12 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.nn.utils.weight_norm import weight_norm
-from model.fc import FCNet
+
+from .fc import FCNet
 
 
 class Attention(nn.Module):
+
     def __init__(self, v_dim, q_dim, num_hid):
         super(Attention, self).__init__()
         self.nonlinear = FCNet([v_dim + q_dim, num_hid])
@@ -30,6 +32,7 @@ class Attention(nn.Module):
 
 
 class NewAttention(nn.Module):
+
     def __init__(self, v_dim, q_dim, num_hid, dropout=0.2):
         super(NewAttention, self).__init__()
 
@@ -49,7 +52,7 @@ class NewAttention(nn.Module):
 
     def logits(self, v, q):
         batch, k, _ = v.size()
-        v_proj = self.v_proj(v) # [batch, k, qdim]
+        v_proj = self.v_proj(v)  # [batch, k, qdim]
         q_proj = self.q_proj(q).unsqueeze(1).repeat(1, k, 1)
         joint_repr = v_proj * q_proj
         joint_repr = self.dropout(joint_repr)

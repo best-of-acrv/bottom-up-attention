@@ -10,9 +10,10 @@ class WordEmbedding(nn.Module):
     The ntoken-th dim is used for padding_idx, which agrees *implicitly*
     with the definition in Dictionary.
     """
+
     def __init__(self, ntoken, emb_dim, dropout):
         super(WordEmbedding, self).__init__()
-        self.emb = nn.Embedding(ntoken+1, emb_dim, padding_idx=ntoken)
+        self.emb = nn.Embedding(ntoken + 1, emb_dim, padding_idx=ntoken)
         self.dropout = nn.Dropout(dropout)
         self.ntoken = ntoken
         self.emb_dim = emb_dim
@@ -29,18 +30,26 @@ class WordEmbedding(nn.Module):
 
 
 class QuestionEmbedding(nn.Module):
-    def __init__(self, in_dim, num_hid, nlayers, bidirect, dropout, rnn_type='GRU'):
+
+    def __init__(self,
+                 in_dim,
+                 num_hid,
+                 nlayers,
+                 bidirect,
+                 dropout,
+                 rnn_type='GRU'):
         """Module for question embedding
         """
         super(QuestionEmbedding, self).__init__()
         assert rnn_type == 'LSTM' or rnn_type == 'GRU'
         rnn_cls = nn.LSTM if rnn_type == 'LSTM' else nn.GRU
 
-        self.rnn = rnn_cls(
-            in_dim, num_hid, nlayers,
-            bidirectional=bidirect,
-            dropout=dropout,
-            batch_first=True)
+        self.rnn = rnn_cls(in_dim,
+                           num_hid,
+                           nlayers,
+                           bidirectional=bidirect,
+                           dropout=dropout,
+                           batch_first=True)
 
         self.in_dim = in_dim
         self.num_hid = num_hid
