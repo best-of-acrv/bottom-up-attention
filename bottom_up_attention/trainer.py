@@ -207,6 +207,7 @@ class Trainer(nn.Module):
 
     def train(self, task, model, dataset, *, batch_size, display_interval,
               eval_interval, max_epochs, snapshot_interval):
+        # TODO attach optimiser, with customisable learning rate
         if not os.path.exists(self.output_directory):
             os.makedirs(self.output_directory, exist_ok=True)
         (self._train_captioning if task == 'captioning' else self._train_vqa)(

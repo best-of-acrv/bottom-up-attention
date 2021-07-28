@@ -372,13 +372,12 @@ pretrained_urls = {
 }
 
 
-def baseline(args, dataset, pretrained=False):
+def baseline(number_hidden_dims, pretrained=False):
 
     # initialise model
-    model = DecoderWithAttention(args,
-                                 attention_dim=dataset.v_dim,
+    model = DecoderWithAttention(attention_dim=dataset.v_dim,
                                  embed_dim=1024,
-                                 decoder_dim=args.num_hid,
+                                 decoder_dim=number_hidden_dims,
                                  vocab_size=len(dataset.word_map),
                                  dropout=0.5)
 
