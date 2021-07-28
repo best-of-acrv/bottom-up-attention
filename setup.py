@@ -14,7 +14,7 @@ setup(name='bottom-up-attention',
       long_description_content_type='text/markdown',
       packages=find_packages(),
       package_data={'bottom_up_attention': ['*.pkl']},
-      install_requires=['acrv_datasets'],
+      install_requires=['acrv_datasets', 'nltk'],
       entry_points={
           'console_scripts': [
               'bottom-up-attention=bottom_up_attention.__main__:main'

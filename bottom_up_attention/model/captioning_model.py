@@ -1,3 +1,4 @@
+from nltk.translate.bleu_score import corpus_bleu
 import os
 import timeit
 import torch
@@ -5,37 +6,55 @@ from torch import nn
 from torch.utils.data import DataLoader
 from torch.nn.utils.weight_norm import weight_norm
 from torch.nn.utils.rnn import pack_padded_sequence
-from helpers.download_helper import download_model
-from helpers.model_helper import find_snapshot
-from helpers.ops import AverageMeter, accuracy
-from nltk.translate.bleu_score import corpus_bleu
+
+from ..helpers import AverageMeter, accuracy
+from .helpers import download_model, find_snapshot
+
 
 class Attention(nn.Module):
+
     def __init__(self, features_dim, decoder_dim, attention_dim, dropout=0.5):
 
         super(Attention, self).__init__()
-        self.features_att = weight_norm(
-            nn.Linear(features_dim, attention_dim))  # linear layer to transform encoded image
-        self.decoder_att = weight_norm(
-            nn.Linear(decoder_dim, attention_dim))  # linear layer to transform decoder's output
-        self.full_att = weight_norm(nn.Linear(attention_dim, 1))  # linear layer to calculate values to be softmax-ed
+        self.features_att = weight_norm(nn.Linear(
+            features_dim,
+            attention_dim))  # linear layer to transform encoded image
+        self.decoder_att = weight_norm(nn.Linear(
+            decoder_dim,
+            attention_dim))  # linear layer to transform decoder's output
+        self.full_att = weight_norm(
+            nn.Linear(attention_dim,
+                      1))  # linear layer to calculate values to be softmax-ed
         self.relu = nn.ReLU()
         self.dropout = nn.Dropout(p=dropout)
         self.softmax = nn.Softmax(dim=1)  # softmax layer to calculate weights
 
     def forward(self, image_features, decoder_hidden):
 
-        att1 = self.features_att(image_features)  # (batch_size, 36, attention_dim)
+        att1 = self.features_att(
+            image_features)  # (batch_size, 36, attention_dim)
         att2 = self.decoder_att(decoder_hidden)  # (batch_size, attention_dim)
-        att = self.full_att(self.dropout(self.relu(att1 + att2.unsqueeze(1)))).squeeze(2)  # (batch_size, 36)
+        att = self.full_att(self.dropout(
+            self.relu(att1 + att2.unsqueeze(1)))).squeeze(
+                2)  # (batch_size, 36)
         alpha = self.softmax(att)  # (batch_size, 36)
-        attention_weighted_encoding = (image_features * alpha.unsqueeze(2)).sum(dim=1)  # (batch_size, features_dim)
+        attention_weighted_encoding = (image_features *
+                                       alpha.unsqueeze(2)).sum(
+                                           dim=1)  # (batch_size, features_dim)
 
         return attention_weighted_encoding
 
 
 class DecoderWithAttention(nn.Module):
-    def __init__(self, args, attention_dim, embed_dim, decoder_dim, vocab_size, features_dim=2048, dropout=0.5):
+
+    def __init__(self,
+                 args,
+                 attention_dim,
+                 embed_dim,
+                 decoder_dim,
+                 vocab_size,
+                 features_dim=2048,
+                 dropout=0.5):
 
         super(DecoderWithAttention, self).__init__()
 
@@ -49,21 +68,29 @@ class DecoderWithAttention(nn.Module):
         self.vocab_size = vocab_size
         self.dropout = dropout
 
-        self.attention = Attention(features_dim, decoder_dim, attention_dim)  # attention network
+        self.attention = Attention(features_dim, decoder_dim,
+                                   attention_dim)  # attention network
 
         self.embedding = nn.Embedding(vocab_size, embed_dim)  # embedding layer
         self.dropout = nn.Dropout(p=self.dropout)
-        self.top_down_attention = nn.LSTMCell(embed_dim + features_dim + decoder_dim, decoder_dim,
-                                              bias=True)  # top down attention LSTMCell
-        self.language_model = nn.LSTMCell(features_dim + decoder_dim, decoder_dim, bias=True)  # language model LSTMCell
-        self.fc = weight_norm(nn.Linear(decoder_dim, vocab_size))  # linear layer to find scores over vocabulary
-        self.init_weights()  # initialize some layers with the uniform distribution
+        self.top_down_attention = nn.LSTMCell(
+            embed_dim + features_dim + decoder_dim, decoder_dim,
+            bias=True)  # top down attention LSTMCell
+        self.language_model = nn.LSTMCell(features_dim + decoder_dim,
+                                          decoder_dim,
+                                          bias=True)  # language model LSTMCell
+        self.fc = weight_norm(nn.Linear(
+            decoder_dim,
+            vocab_size))  # linear layer to find scores over vocabulary
+        self.init_weights(
+        )  # initialize some layers with the uniform distribution
 
         # loss criterions
         self.criterion_ce = nn.CrossEntropyLoss()
 
         # optimiser
-        self.optimiser = torch.optim.Adamax(self.parameters(), lr=args.learning_rate)
+        self.optimiser = torch.optim.Adamax(self.parameters(),
+                                            lr=args.learning_rate)
 
     def init_weights(self):
 
@@ -73,7 +100,8 @@ class DecoderWithAttention(nn.Module):
 
     def init_hidden_state(self, batch_size):
 
-        h = torch.zeros(batch_size, self.decoder_dim)  # (batch_size, decoder_dim)
+        h = torch.zeros(batch_size,
+                        self.decoder_dim)  # (batch_size, decoder_dim)
         c = torch.zeros(batch_size, self.decoder_dim)
 
         if self.cuda_available:
@@ -88,22 +116,27 @@ class DecoderWithAttention(nn.Module):
         vocab_size = self.vocab_size
 
         # Flatten image
-        image_features_mean = image_features.mean(1)  # (batch_size, num_pixels, encoder_dim)
+        image_features_mean = image_features.mean(
+            1)  # (batch_size, num_pixels, encoder_dim)
         if self.cuda_available:
             image_features_mean = image_features_mean.cuda()
 
         # Sort input data by decreasing lengths; why? apparent below
-        caption_lengths, sort_ind = caption_lengths.squeeze(1).sort(dim=0, descending=True)
+        caption_lengths, sort_ind = caption_lengths.squeeze(1).sort(
+            dim=0, descending=True)
         image_features = image_features[sort_ind]
         image_features_mean = image_features_mean[sort_ind]
         encoded_captions = encoded_captions[sort_ind]
 
         # Embedding
-        embeddings = self.embedding(encoded_captions)  # (batch_size, max_caption_length, embed_dim)
+        embeddings = self.embedding(
+            encoded_captions)  # (batch_size, max_caption_length, embed_dim)
 
         # Initialize LSTM state
-        h1, c1 = self.init_hidden_state(batch_size)  # (batch_size, decoder_dim)
-        h2, c2 = self.init_hidden_state(batch_size)  # (batch_size, decoder_dim)
+        h1, c1 = self.init_hidden_state(
+            batch_size)  # (batch_size, decoder_dim)
+        h2, c2 = self.init_hidden_state(
+            batch_size)  # (batch_size, decoder_dim)
 
         # We won't decode at the <end> position, since we've finished generating as soon as we generate <end>
         # So, decoding lengths are actual lengths - 1
@@ -122,12 +155,19 @@ class DecoderWithAttention(nn.Module):
         for t in range(max(decode_lengths)):
             batch_size_t = sum([l > t for l in decode_lengths])
             h1, c1 = self.top_down_attention(
-                torch.cat([h2[:batch_size_t], image_features_mean[:batch_size_t], embeddings[:batch_size_t, t, :]],
+                torch.cat([
+                    h2[:batch_size_t], image_features_mean[:batch_size_t],
+                    embeddings[:batch_size_t, t, :]
+                ],
                           dim=1), (h1[:batch_size_t], c1[:batch_size_t]))
-            attention_weighted_encoding = self.attention(image_features[:batch_size_t], h1[:batch_size_t])
+            attention_weighted_encoding = self.attention(
+                image_features[:batch_size_t], h1[:batch_size_t])
             h2, c2 = self.language_model(
-                torch.cat([attention_weighted_encoding[:batch_size_t], h1[:batch_size_t]], dim=1),
-                (h2[:batch_size_t], c2[:batch_size_t]))
+                torch.cat([
+                    attention_weighted_encoding[:batch_size_t],
+                    h1[:batch_size_t]
+                ],
+                          dim=1), (h2[:batch_size_t], c2[:batch_size_t]))
             preds = self.fc(self.dropout(h2))  # (batch_size_t, vocab_size)
             predictions[:batch_size_t, t, :] = preds
 
@@ -140,8 +180,11 @@ class DecoderWithAttention(nn.Module):
 
         # Remove timesteps that we didn't decode at, or are pads
         # pack_padded_sequence is an easy trick to do this
-        scores = pack_padded_sequence(scores, decode_lengths, batch_first=True)[0]
-        targets = pack_padded_sequence(targets, decode_lengths, batch_first=True)[0]
+        scores = pack_padded_sequence(scores, decode_lengths,
+                                      batch_first=True)[0]
+        targets = pack_padded_sequence(targets,
+                                       decode_lengths,
+                                       batch_first=True)[0]
 
         # Calculate loss
         loss = self.criterion_ce(scores, targets)
@@ -151,7 +194,8 @@ class DecoderWithAttention(nn.Module):
         loss.backward()
 
         # Clip gradients when they are getting too large
-        torch.nn.utils.clip_grad_norm_(filter(lambda p: p.requires_grad, self.parameters()), 0.25)
+        torch.nn.utils.clip_grad_norm_(
+            filter(lambda p: p.requires_grad, self.parameters()), 0.25)
 
         # Update weights
         self.optimiser.step()
@@ -162,7 +206,10 @@ class DecoderWithAttention(nn.Module):
         return loss, top5
 
     def validate(self, dataset):
-        dataloader = DataLoader(dataset, batch_size=500, shuffle=False, num_workers=1)
+        dataloader = DataLoader(dataset,
+                                batch_size=500,
+                                shuffle=False,
+                                num_workers=1)
 
         batch_time = AverageMeter()
         losses = AverageMeter()
@@ -170,7 +217,8 @@ class DecoderWithAttention(nn.Module):
 
         start = timeit.default_timer()
 
-        references = list()  # references (true captions) for calculating BLEU-4 score
+        references = list(
+        )  # references (true captions) for calculating BLEU-4 score
         hypotheses = list()  # hypotheses (predictions)
 
         # Batches
@@ -191,7 +239,8 @@ class DecoderWithAttention(nn.Module):
                     all_captions = all_captions.cuda()
 
                 # forward inference to compute logits
-                scores, caps_sorted, decode_lengths, sort_ind = self.forward(features, caption, caption_len)
+                scores, caps_sorted, decode_lengths, sort_ind = self.forward(
+                    features, caption, caption_len)
 
                 # Since we decoded starting with <start>, the targets are all words after <start>, up to <end>
                 targets = caps_sorted[:, 1:]
@@ -199,8 +248,12 @@ class DecoderWithAttention(nn.Module):
                 # Remove timesteps that we didn't decode at, or are pads
                 # pack_padded_sequence is an easy trick to do this
                 scores_copy = scores.clone()
-                scores = pack_padded_sequence(scores, decode_lengths, batch_first=True)[0]
-                targets = pack_padded_sequence(targets, decode_lengths, batch_first=True)[0]
+                scores = pack_padded_sequence(scores,
+                                              decode_lengths,
+                                              batch_first=True)[0]
+                targets = pack_padded_sequence(targets,
+                                               decode_lengths,
+                                               batch_first=True)[0]
 
                 # Calculate loss
                 loss = self.criterion_ce(scores, targets)
@@ -213,24 +266,34 @@ class DecoderWithAttention(nn.Module):
                 batch_time.update(stop - start)
                 start = stop
 
-                print('Validation: [{0}/{1}]\t'
-                      'Batch Time {batch_time.val:.3f} ({batch_time.avg:.3f})\t'
-                      'Loss {loss.val:.4f} ({loss.avg:.4f})\t'
-                      'Top-5 Accuracy {top5.val:.3f} ({top5.avg:.3f})\t'.format(i, len(dataloader),
-                                                                                batch_time=batch_time,
-                                                                                loss=losses, top5=top5accs))
+                print(
+                    'Validation: [{0}/{1}]\t'
+                    'Batch Time {batch_time.val:.3f} ({batch_time.avg:.3f})\t'
+                    'Loss {loss.val:.4f} ({loss.avg:.4f})\t'
+                    'Top-5 Accuracy {top5.val:.3f} ({top5.avg:.3f})\t'.format(
+                        i,
+                        len(dataloader),
+                        batch_time=batch_time,
+                        loss=losses,
+                        top5=top5accs))
 
                 # Store references (true captions), and hypothesis (prediction) for each image
                 # If for n images, we have n hypotheses, and references a, b, c... for each image, we need -
                 # references = [[ref1a, ref1b, ref1c], [ref2a, ref2b], ...], hypotheses = [hyp1, hyp2, ...]
 
                 # References
-                all_captions = all_captions[sort_ind]  # because images were sorted in the decoder
+                all_captions = all_captions[
+                    sort_ind]  # because images were sorted in the decoder
                 for j in range(all_captions.shape[0]):
                     img_caps = all_captions[j].tolist()
                     img_captions = list(
-                        map(lambda c: [w for w in c if w not in {dataset.word_map['<start>'], dataset.word_map['<pad>']}],
-                            img_caps))  # remove <start> and pads
+                        map(
+                            lambda c: [
+                                w for w in c if w not in {
+                                    dataset.word_map['<start>'], dataset.
+                                    word_map['<pad>']
+                                }
+                            ], img_caps))  # remove <start> and pads
                     references.append(img_captions)
 
                 # Hypotheses
@@ -238,7 +301,8 @@ class DecoderWithAttention(nn.Module):
                 preds = preds.tolist()
                 temp_preds = list()
                 for j, p in enumerate(preds):
-                    temp_preds.append(preds[j][:decode_lengths[j]])  # remove pads
+                    temp_preds.append(
+                        preds[j][:decode_lengths[j]])  # remove pads
                 preds = temp_preds
                 hypotheses.extend(preds)
 
@@ -248,9 +312,9 @@ class DecoderWithAttention(nn.Module):
         bleu4 = corpus_bleu(references, hypotheses)
         bleu4 = round(bleu4, 4)
 
-        print('\n * LOSS - {loss.avg:.3f}, TOP-5 ACCURACY - {top5.avg:.3f}, BLEU-4 - {bleu}\n'.format(loss=losses,
-                                                                                                      top5=top5accs,
-                                                                                                      bleu=bleu4))
+        print(
+            '\n * LOSS - {loss.avg:.3f}, TOP-5 ACCURACY - {top5.avg:.3f}, BLEU-4 - {bleu}\n'
+            .format(loss=losses, top5=top5accs, bleu=bleu4))
         return bleu4
 
     def save(self, global_iteration, log_directory):
@@ -261,7 +325,9 @@ class DecoderWithAttention(nn.Module):
             'global_iteration': global_iteration
         }
 
-        model_path = os.path.join(log_directory, 'snapshots', 'model-{:06d}.pth.tar'.format(global_iteration))
+        model_path = os.path.join(
+            log_directory, 'snapshots',
+            'model-{:06d}.pth.tar'.format(global_iteration))
         print('Creating Snapshot: ' + model_path)
         torch.save(model, model_path)
 
@@ -274,13 +340,17 @@ class DecoderWithAttention(nn.Module):
             map_location = torch.device('cpu')
 
         if model_name is None:
-            print('Model not found: initialising using default PyTorch initialisation!')
+            print(
+                'Model not found: initialising using default PyTorch initialisation!'
+            )
             # uses pytorch default initialisation
             return 0
         # load model if snapshot was found
         else:
-            full_model = torch.load(os.path.join(snapshot_dir, model_name), map_location=map_location)
-            print('Loading model from: ' + os.path.join(snapshot_dir, model_name))
+            full_model = torch.load(os.path.join(snapshot_dir, model_name),
+                                    map_location=map_location)
+            print('Loading model from: ' +
+                  os.path.join(snapshot_dir, model_name))
             self.load_state_dict(full_model['model'], strict=False)
             if with_optim:
                 self.optimiser.load_state_dict(full_model['optimiser'])
@@ -295,8 +365,10 @@ class DecoderWithAttention(nn.Module):
 
 
 pretrained_urls = {
-    'baseline-captioning': 'https://cloudstor.aarnet.edu.au/plus/s/xDJpTq3digOjuNZ/download',
+    'baseline-captioning':
+        'https://cloudstor.aarnet.edu.au/plus/s/xDJpTq3digOjuNZ/download',
 }
+
 
 def baseline(args, dataset, pretrained=False):
 
@@ -317,7 +389,9 @@ def baseline(args, dataset, pretrained=False):
     if pretrained:
         key = 'baseline-captioning'
         url = pretrained_urls[key]
-        model.load_state_dict(download_model(key, url, map_location=map_location)['model'], strict=False)
+        model.load_state_dict(download_model(
+            key, url, map_location=map_location)['model'],
+                              strict=False)
     else:
         key = 'untrained'
 
