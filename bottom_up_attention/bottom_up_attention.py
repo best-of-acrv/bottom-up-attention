@@ -118,24 +118,30 @@ def _load_dataset(task, dataset_dir, mode, cache_dir, quiet=False):
         print("Using 'dataset_dir': %s" % dataset_dir)
 
     # Defer to acrv_datasets for making sure required datasets are downloaded
-    datasets = [
+    DATASETS = [
         'coco/vqa_questions_train', 'coco/vqa_questions_test',
         'coco/vqa_questions_val', 'coco/vqa_annotations_train',
         'coco/vqa_annotations_val', 'glove', 'caption_features/trainval2014_36'
     ]
-    dirs = acrv_datasets.get_datasets(datasets, datasets_directory=dataset_dir)
+    ds = {
+        d: f for d, f in zip(
+            DATASETS,
+            acrv_datasets.get_datasets(DATASETS,
+                                       datasets_directory=dataset_dir))
+    }
     if not quiet:
         print("\n")
 
     # Ensure all required derived data exists
-    # TODO glue this together
     fn_dictionary = os.path.join(cache_dir, 'dictionary.pkl')
     fn_embeddings = os.path.join(cache_dir, 'glove6b_init.npy')
-    dh.make_dictionary(dirs[:3], fn_dictionary)
-    dh.make_glove_embeddings(fn_dictionary, dirs[5], fn_embeddings)
-    dh.generate_softscores(dirs[3:5], cache_dir)
+    dh.make_dictionary([v for k, v in ds.items() if 'vqa_questions' in k],
+                       fn_dictionary)
+    dh.make_glove_embeddings(fn_dictionary, ds['glove'], fn_embeddings)
+    dh.generate_softscores(
+        [v for k, v in ds.items() if 'vqa_annotations' in k], cache_dir)
     dh.convert_detection_features()
-    dh.create_caption_input_data()
+    dh.make_caption_input_data()
 
     # Return a PyTorch dataset with the appropriate wrappings
     # TODO
