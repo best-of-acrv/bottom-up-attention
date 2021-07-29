@@ -345,38 +345,6 @@ class DecoderWithAttention(nn.Module):
         print('Creating Snapshot: ' + model_path)
         torch.save(model, model_path)
 
-    def load(self, log_directory=None, snapshot_num=None, with_optim=True):
-        snapshot_dir = os.path.join(log_directory, 'snapshots')
-        model_name = find_snapshot(snapshot_dir, snapshot_num)
-
-        map_location = None
-        if not self.cuda_available:
-            map_location = torch.device('cpu')
-
-        if model_name is None:
-            print(
-                'Model not found: initialising using default PyTorch initialisation!'
-            )
-            # uses pytorch default initialisation
-            return 0
-        # load model if snapshot was found
-        else:
-            full_model = torch.load(os.path.join(snapshot_dir, model_name),
-                                    map_location=map_location)
-            print('Loading model from: ' +
-                  os.path.join(snapshot_dir, model_name))
-            self.load_state_dict(full_model['model'], strict=False)
-            if with_optim:
-                self.optimiser.load_state_dict(full_model['optimiser'])
-                # move optimiser to cuda
-                if self.cuda_available:
-                    for state in self.optimiser.state.values():
-                        for k, v in state.items():
-                            if isinstance(v, torch.Tensor):
-                                state[k] = v.cuda()
-            curr_iteration = full_model['global_iteration']
-            return curr_iteration
-
 
 pretrained_urls = {
     'baseline-captioning':
