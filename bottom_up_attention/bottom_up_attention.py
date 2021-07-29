@@ -20,19 +20,26 @@ class BottomUpAttention(object):
     def __init__(self,
                  *,
                  cache_dir=os.path.expanduser('~/.bottom-up-attention-cache'),
+                 dataset_dir=None,
                  gpu_id=0,
-                 load_pretrained=None,
+                 load_pretrained=True,
                  load_snapshot=None,
+                 load_snapshot_optimiser=True,
                  model_name='bottom-up-attention',
                  model_seed=0,
                  num_hidden_dims=1024,
                  task='captioning'):
         # Apply sanitised arguments
         self.cache_dir = cache_dir
+        self.dataset_dir = dataset_dir
         self.gpu_id = gpu_id
         self.model_seed = model_seed
         self.num_hidden_dims = num_hidden_dims
         self.task = _sanitise_arg(task, 'task', BottomUpAttention.TASKS)
+
+        self.load_pretrained = load_pretrained
+        self.load_snapshot = load_snapshot
+        self.load_snapshot_optimiser = load_snapshot_optimiser
 
         # Ensure cache exists
         if not os.path.exists(self.cache_dir):
@@ -47,23 +54,28 @@ class BottomUpAttention(object):
         if not torch.cuda.is_available():
             raise RuntimeWarning('PyTorch could not find CUDA, using CPU ...')
 
+        # The model depends on derived data obtained through load_dataset...
+        # ideally we would re-write the models so they don't depend on data
+        # they shouldn't need at initialisaiton time, but instead we lazily
+        # load the dataset here as well...
+        # TODO fix this!
+        dataset = _load_dataset(self.task, self.dataset_dir, 'eval',
+                                self.cache_dir)
+
         # Load the model based on the specified parameters
-        self.model = None
-        if self.load_snapshot:
-            print("\nLOADING MODEL FROM SNAPSHOT:")
-            self.model = _from_snapshot(self.load_snapshot)
-        else:
-            print("\nLOADING MODEL FROM PRE-TRAINED WEIGHTS:")
-            self.model = _get_model(self.num_hidden_dims)
+        print("\nLOADING MODEL FROM %s:" %
+              ('SNAPSHOT' if load_snapshot else
+               'PRE-TRAINED WEIGHTS' if self.load_pretrained else 'SCRATCH'))
+        self.model = _get_model(self.task, dataset, self.cache_dir,
+                                self.num_hidden_dims, self.load_pretrained,
+                                self.load_snapshot,
+                                self.load_snapshot_optimiser)
         self.model.cuda()
 
-    def evaluate(self,
-                 *,
-                 batch_size=100,
-                 dataset_dir=None,
-                 output_directory='./eval_output'):
+    def evaluate(self, *, batch_size=100, output_directory='./eval_output'):
         # Load in the dataset
-        dataset = _load_dataset(self.task, dataset_dir, 'eval', self.cache_dir)
+        dataset = _load_dataset(self.task, self.dataset_dir, 'eval',
+                                self.cache_dir)
 
         # Perform the requested evaluation
         Evaluator(batch_size=batch_size,
@@ -99,19 +111,20 @@ class BottomUpAttention(object):
     def train(self,
               *,
               batch_size=100,
-              dataset_dir=None,
               display_interval=100,
               eval_interval=1,
+              learning_rate=2e-3,
               max_epochs=50,
               output_directory=os.path.expanduser(
                   '~/bottom-up-attention-output'),
               snapshot_interval=5):
         # Load in the dataset
-        dataset = _load_dataset(self.task, dataset_dir, self.cache_dir,
+        dataset = _load_dataset(self.task, self.dataset_dir, self.cache_dir,
                                 'train')
 
         # Start a model trainer
         print("\nPERFORMING TRAINING:")
+        self.model.create_optimiser(learning_rate=learning_rate)
         Trainer(output_directory).train(self.model,
                                         self.task,
                                         dataset,
@@ -122,14 +135,30 @@ class BottomUpAttention(object):
                                         snapshot_interval=snapshot_interval)
 
 
-def _get_model(task):
-    m = (captioning_model.baseline
-         if task == BottomUpAttention.TASKS[0] else vqa_model.baseline)()
+def _get_model(task,
+               dataset,
+               cache_dir,
+               number_hidden_dims,
+               load_pretrained,
+               snapshot_filename=None,
+               use_snapshot_optimiser=True):
+    m = (captioning_model.baseline if task == BottomUpAttention.TASKS[0] else
+         vqa_model.baseline)(dataset,
+                             number_hidden_dims,
+                             pretrained=load_pretrained)
     if task == BottomUpAttention.TASKS[1]:
-        m.w_emb.init_embedding(
-            os.path.join(
-                acrv_datasets.get_datasets('glove')[0],
-                'glove6b_init_300d.npy'))
+        m.w_emb.init_embedding(os.path.join(cache_dir, 'glove6b_init.npy'))
+
+    model_data = None
+    if snapshot_filename is not None:
+        print('Loading model from:\n\t%s' % snapshot_filename)
+        model_data = torch.load(snapshot_filename)
+        m.load_state_dict(model_data['weights'])
+
+    m.create_optimiser(optimiser_state=(
+        None if model_data is None or not use_snapshot_optimiser else
+        model_data['optimiser']))
+
     return m
 
 

@@ -90,9 +90,19 @@ class DecoderWithAttention(nn.Module):
         # optimiser
         self.optimiser = None
 
-    def attach_optimiser(self, learning_rate):
+    def create_optimiser(self, learning_rate=2e-3, optimiser_state=None):
+        state = (self.optimiser.state_dict()
+                 if optimiser_state is None and self.optimiser is not None else
+                 optimiser_state if optimiser_state is not None else None)
         self.optimiser = torch.optim.Adamax(self.parameters(),
                                             lr=learning_rate)
+        if state != None:
+            self.optimiser.load_state_dict(state)
+            if self.cuda_available:
+                for s in self.optimiser.state.values():
+                    for k, v in s.items():
+                        if isinstance(v, torch.Tensor):
+                            s[k] = v.cuda()
 
     def init_weights(self):
 
@@ -322,9 +332,11 @@ class DecoderWithAttention(nn.Module):
     def save(self, global_iteration, log_directory):
         os.makedirs(os.path.join(log_directory, 'snapshots'), exist_ok=True)
         model = {
-            'model': self.state_dict(),
             'optimiser': self.optimiser.state_dict(),
-            'global_iteration': global_iteration
+            'global_iteration': global_iteration,
+            'learning_rate': self.learning_rate,
+            'task': 'captioning',
+            'weights': self.state_dict(),
         }
 
         model_path = os.path.join(
@@ -372,7 +384,7 @@ pretrained_urls = {
 }
 
 
-def baseline(number_hidden_dims, pretrained=False):
+def baseline(dataset, number_hidden_dims, pretrained=False):
 
     # initialise model
     model = DecoderWithAttention(attention_dim=dataset.v_dim,
