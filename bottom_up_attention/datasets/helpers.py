@@ -7,7 +7,7 @@ import json
 import numpy as np
 import os
 import pickle
-import pkg_resources
+from pkg_resources import resource_stream
 from random import choice, sample
 import re
 from tqdm import tqdm
@@ -263,9 +263,10 @@ def generate_detection_features(trainval36_dir, output_train_hdf5,
         'image_id', 'image_w', 'image_h', 'num_boxes', 'boxes', 'features'
     ]
 
-    with open('/'.join(('datasets', 'train_ids.pkl')), 'rb') as f:
+    with resource_stream(__name__, '/'.join(
+        ('datasets', 'train_ids.pkl'))) as f:
         train_imgids = pickle.load(f)
-    with open('/'.join(('datasets', 'val_ids.pkl')), 'rb') as f:
+    with resource_stream(__name__, '/'.join(('datasets', 'val_ids.pkl'))) as f:
         val_imgids = pickle.load(f)
     train_indices = {}
     val_indices = {}
