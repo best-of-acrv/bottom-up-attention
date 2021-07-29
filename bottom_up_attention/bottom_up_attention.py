@@ -11,6 +11,7 @@ from .datasets.captioning import CaptionDataset
 from .datasets.vqa import Dictionary, VqaDataset
 from .model import captioning_model
 from .model import vqa_model
+from .predictor import Predictor
 from .trainer import Trainer
 
 
@@ -98,10 +99,7 @@ class BottomUpAttention(object):
 
         # Perform the forward pass
         # TODO create Predictor class... (look in Evaluator)
-        out = Predictor().predict(
-            img,
-            self.model,
-        )
+        out = Predictor().predict(img, self.model)
 
         # Save the file if requested, & return the output
         if output_file:
