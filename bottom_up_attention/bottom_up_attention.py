@@ -49,8 +49,8 @@ class BottomUpAttention(object):
         # Try setting up GPU integration
         os.environ['CUDA_DEVICE_ORDER'] = 'PCI_BUS_ID'
         os.environ['CUDA_VISIBLE_DEVICES'] = str(self.gpu_id)
-        torch.manual_seed(self.gpu_id)
-        torch.cuda.manual_seed(self.gpu_id)
+        torch.manual_seed(self.model_seed)
+        torch.cuda.manual_seed(self.model_seed)
         # torch.backends.cudnn.benchmark = True
         if not torch.cuda.is_available():
             raise RuntimeWarning('PyTorch could not find CUDA, using CPU ...')
