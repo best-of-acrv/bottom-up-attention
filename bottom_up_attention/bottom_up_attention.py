@@ -4,6 +4,7 @@ import numpy as np
 import os
 from PIL import Image
 import torch
+import warnings
 
 from .evaluator import Evaluator
 from .datasets import helpers as dh
@@ -53,7 +54,7 @@ class BottomUpAttention(object):
         torch.cuda.manual_seed(self.model_seed)
         # torch.backends.cudnn.benchmark = True
         if not torch.cuda.is_available():
-            raise RuntimeWarning('PyTorch could not find CUDA, using CPU ...')
+            warnings.warn('PyTorch could not find CUDA, using CPU ...')
 
         # The model depends on derived data obtained through load_dataset...
         # ideally we would re-write the models so they don't depend on data
