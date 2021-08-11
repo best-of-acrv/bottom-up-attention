@@ -180,7 +180,7 @@ def _load_dataset(task, dataset_dir, mode, cache_dir, quiet=False):
         d: f for d, f in zip(
             DATASETS,
             acrv_datasets.get_datasets(DATASETS,
-                                       datasets_directory=dataset_dir))
+                                       datasets_directory=dataset_dir)[0])
     }
     for d, f in ds.items():
         if not f:
