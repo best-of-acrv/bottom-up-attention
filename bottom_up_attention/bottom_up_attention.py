@@ -182,6 +182,10 @@ def _load_dataset(task, dataset_dir, mode, cache_dir, quiet=False):
             acrv_datasets.get_datasets(DATASETS,
                                        datasets_directory=dataset_dir))
     }
+    for d, f in ds.items():
+        if not f:
+            raise ValueError("Failed to get dataset '%s' using acrv_datasets" %
+                             d)
     if not quiet:
         print("\n")
 
